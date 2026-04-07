@@ -1,0 +1,40 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Android build outputs
+app/build/
+app/release/
+
+# Kotlin
+*.class
+*.jar
+*.war
+*.aar
+
+# Gradle wrapper (keep gradlew but not cache)
+.gradle/
+
+# IntelliJ / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+out/
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google Services (contains API keys)
+google-services.json
+
+# Proguard
+proguard/

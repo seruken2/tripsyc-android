@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="coral">#E8654A</color>
+    <color name="chalk50">#F5F2EE</color>
+    <color name="chalk900">#1A1714</color>
+    <color name="chalk500">#7A7470</color>
+    <color name="chalk200">#D6D0CB</color>
+    <color name="sage">#6B8F71</color>
+    <color name="gold">#C9A84C</color>
+    <color name="success">#4CAF50</color>
+</resources>
