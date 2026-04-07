@@ -1,5 +1,6 @@
 package com.tripsyc.app.ui.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -103,7 +104,7 @@ fun LoginScreen(
                 modifier = Modifier.padding(horizontal = 24.dp)
             ) {
                 // App icon
-                androidx.compose.foundation.Image(
+                Image(
                     painter = painterResource(R.drawable.tripsyc_icon),
                     contentDescription = "Tripsyc",
                     modifier = Modifier
@@ -114,7 +115,7 @@ fun LoginScreen(
                 )
 
                 // Wordmark
-                androidx.compose.foundation.Image(
+                Image(
                     painter = painterResource(R.drawable.tripsyc_logo),
                     contentDescription = "Tripsyc",
                     modifier = Modifier
