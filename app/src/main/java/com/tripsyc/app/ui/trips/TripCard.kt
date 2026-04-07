@@ -30,21 +30,23 @@ fun TripCard(
 ) {
     val dateLock = trip.locks?.firstOrNull { it.lockType == LockType.DATE }
     val destLock = trip.locks?.firstOrNull { it.lockType == LockType.DESTINATION }
-    val status = tripStatus(dateLock, destLock)
+    val status = tripStatus(dateLock, destLock, trip)
 
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         shadowElevation = 4.dp,
-        color = CardBackground
+        color = CardBackground,
+        tonalElevation = 0.dp
     ) {
         Column {
-            // Cover image with overlay
+            // ── Cover image with gradient overlay ────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(172.dp)
             ) {
+                // Cover image or placeholder gradient
                 if (!trip.coverImage.isNullOrEmpty() &&
                     (trip.coverImage.startsWith("https://") || trip.coverImage.startsWith("http://"))
                 ) {
@@ -55,7 +57,7 @@ fun TripCard(
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    // Placeholder gradient
+                    // Coral gradient placeholder
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -63,11 +65,23 @@ fun TripCard(
                                 Brush.linearGradient(
                                     colors = listOf(Coral, CoralLight)
                                 )
-                            )
-                    )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Faint app icon placeholder
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.White.copy(alpha = 0.3f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("T", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
 
-                // Gradient overlay for readability
+                // Gradient overlay — clear → black 82% (matches iOS)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -82,11 +96,11 @@ fun TripCard(
                         )
                 )
 
-                // Bottom content
+                // Trip name + month (bottom-left)
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(12.dp)
+                        .padding(start = 14.dp, end = 80.dp, bottom = 12.dp)
                 ) {
                     Text(
                         text = trip.name,
@@ -98,157 +112,227 @@ fun TripCard(
                     if (!trip.approxMonth.isNullOrEmpty()) {
                         Text(
                             text = trip.approxMonth,
-                            color = Color.White.copy(alpha = 0.75f),
-                            fontSize = 12.sp
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
 
-                // Status badge top-right
-                Surface(
+                // Status badge capsule (bottom-right, matches iOS .ultraThinMaterial)
+                Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(10.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = statusColor(status).copy(alpha = 0.9f)
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 14.dp, bottom = 12.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.80f))
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
-                    Text(
-                        text = status,
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            // Card body
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Member count
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = Chalk500,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    val memberCount = trip.count?.members ?: trip.members?.size ?: 0
-                    Text(
-                        text = "$memberCount ${if (memberCount == 1) "member" else "members"}",
-                        color = Chalk500,
-                        fontSize = 12.sp
-                    )
-                }
-
-                // Member avatars (first 4)
-                val members = trip.members?.take(4) ?: emptyList()
-                Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
-                    members.forEachIndexed { index, member ->
-                        val initial = member.name.firstOrNull()?.uppercase() ?: "?"
-                        Box(
-                            modifier = Modifier
-                                .size(26.dp)
-                                .clip(CircleShape)
-                                .background(Coral.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (!member.avatarUrl.isNullOrEmpty()) {
-                                AsyncImage(
-                                    model = member.avatarUrl,
-                                    contentDescription = member.name,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } else {
-                                Text(
-                                    text = initial,
-                                    color = Coral,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // Gathering status has a pulsing dot
+                        if (status.label == "Gathering") {
+                            Box(
+                                modifier = Modifier
+                                    .size(5.dp)
+                                    .clip(CircleShape)
+                                    .background(status.color)
+                            )
                         }
+                        Text(
+                            text = status.label,
+                            color = status.color,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
 
-            // Progress strip (4 stages)
+            // ── Card body: member avatars + member count ──────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp)
+                    .padding(top = 11.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Avatar row + member count
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    // Member avatars (up to 4, overlapping)
+                    val members = trip.members?.take(4) ?: emptyList()
+                    Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+                        members.forEach { member ->
+                            val initial = member.name.firstOrNull()?.uppercase() ?: "?"
+                            Box(
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White) // white ring
+                                    .padding(1.5.dp)
+                                    .clip(CircleShape)
+                                    .background(Coral.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (!member.avatarUrl.isNullOrEmpty()) {
+                                    AsyncImage(
+                                        model = member.avatarUrl,
+                                        contentDescription = member.name,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Text(
+                                        text = initial,
+                                        color = Coral,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Member count text
+                    val memberCount = trip.count?.members ?: trip.members?.size ?: 0
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = Chalk500,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Text(
+                            text = "$memberCount ${if (memberCount == 1) "member" else "members"}",
+                            color = Chalk500,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+
+                // Lock indicators (date + destination)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LockBadge(
+                        isLocked = dateLock?.locked == true,
+                        label = "Dates"
+                    )
+                    LockBadge(
+                        isLocked = destLock?.locked == true,
+                        label = "Dest"
+                    )
+                }
+            }
+
+            // ── Progress strip: 4 segments ────────────────────────────────
             TripProgressStrip(
-                dateVoting = true, // Simplified: always show all stages
-                dateLocked = dateLock?.locked == true,
-                destVoting = true,
-                destLocked = destLock?.locked == true
+                currentStage = currentStage(dateLock, destLock, trip)
             )
         }
     }
 }
 
 @Composable
-fun TripProgressStrip(
-    dateVoting: Boolean,
-    dateLocked: Boolean,
-    destVoting: Boolean,
-    destLocked: Boolean
-) {
-    val stages = listOf(
-        Pair("Planning", true),
-        Pair("Date", dateLocked),
-        Pair("Destination", destLocked),
-        Pair("Confirmed", dateLocked && destLocked)
-    )
-
+private fun LockBadge(isLocked: Boolean, label: String) {
     Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(11.dp)
+                .clip(CircleShape)
+                .background(if (isLocked) Success else Chalk200)
+        )
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (isLocked) Success else Chalk400
+        )
+    }
+}
+
+@Composable
+fun TripProgressStrip(currentStage: Int) {
+    val stageLabels = listOf("Gather", "Vote", "Lock", "Go!")
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(4.dp)
+            .padding(horizontal = 14.dp)
+            .padding(bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        stages.forEachIndexed { index, (_, active) ->
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .background(
-                        if (active) Coral else Chalk200
-                    )
-                    .then(
-                        if (index == 0) Modifier.clip(
-                            RoundedCornerShape(bottomStart = 18.dp)
-                        ) else Modifier
-                    )
-                    .then(
-                        if (index == stages.size - 1) Modifier.clip(
-                            RoundedCornerShape(bottomEnd = 18.dp)
-                        ) else Modifier
-                    )
-            )
-            if (index < stages.size - 1) {
-                Spacer(modifier = Modifier.width(1.dp))
+        // Bar segments
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            for (i in 0 until 4) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(if (i <= currentStage) Coral else Chalk100)
+                )
+            }
+        }
+
+        // Labels
+        Row(modifier = Modifier.fillMaxWidth()) {
+            stageLabels.forEachIndexed { i, label ->
+                Text(
+                    text = label,
+                    fontSize = 9.sp,
+                    fontWeight = if (i <= currentStage) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (i <= currentStage) Coral else Chalk400,
+                    modifier = Modifier.weight(1f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
             }
         }
     }
 }
 
-private fun tripStatus(dateLock: DecisionLock?, destLock: DecisionLock?): String {
+// ── Helper functions ──────────────────────────────────────────────────────────
+
+private data class TripStatus(val label: String, val color: Color)
+
+private fun tripStatus(dateLock: DecisionLock?, destLock: DecisionLock?, trip: Trip): TripStatus {
     val dl = dateLock?.locked == true
     val dest = destLock?.locked == true
+    val memberCount = trip.count?.members ?: trip.members?.size ?: 0
     return when {
-        dl && dest -> "Confirmed"
-        dl || dest -> "Locked"
-        else -> "Planning"
+        dl && dest -> TripStatus("Confirmed", Success)
+        dl || dest -> TripStatus("Locked", Dusk)
+        memberCount > 1 -> TripStatus("Voting", Gold)
+        else -> TripStatus("Gathering", Coral)
     }
 }
 
-private fun statusColor(status: String) = when (status) {
-    "Confirmed" -> Success
-    "Locked" -> Gold
-    else -> Coral
+private fun currentStage(dateLock: DecisionLock?, destLock: DecisionLock?, trip: Trip): Int {
+    val dl = dateLock?.locked == true
+    val dest = destLock?.locked == true
+    val memberCount = trip.count?.members ?: trip.members?.size ?: 0
+    return when {
+        dl && dest -> 3
+        dl || dest -> 2
+        memberCount > 1 -> 1
+        else -> 0
+    }
 }

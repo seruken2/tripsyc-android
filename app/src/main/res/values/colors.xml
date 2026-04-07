@@ -1,11 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Primary -->
     <color name="coral">#E8654A</color>
-    <color name="chalk50">#F5F2EE</color>
-    <color name="chalk900">#1A1714</color>
-    <color name="chalk500">#7A7470</color>
-    <color name="chalk200">#D6D0CB</color>
+    <color name="coral_light">#F0856E</color>
+
+    <!-- Accent -->
     <color name="sage">#6B8F71</color>
+    <color name="sage_light">#E8F0E9</color>
     <color name="gold">#C9A84C</color>
-    <color name="success">#4CAF50</color>
+    <color name="dusk">#7B6FA0</color>
+
+    <!-- Chalk neutrals -->
+    <color name="chalk50">#F5F2EE</color>
+    <color name="chalk100">#EDE9E4</color>
+    <color name="chalk200">#D6D0CB</color>
+    <color name="chalk300">#B8B0A8</color>
+    <color name="chalk400">#9A9088</color>
+    <color name="chalk500">#7A7470</color>
+    <color name="chalk600">#5C5550</color>
+    <color name="chalk900">#1A1714</color>
+
+    <!-- Surfaces -->
+    <color name="card_background">#FFFFFF</color>
+
+    <!-- Semantic -->
+    <color name="success">#4A9B6F</color>
+    <color name="danger">#D64545</color>
 </resources>

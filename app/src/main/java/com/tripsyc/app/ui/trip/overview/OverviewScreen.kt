@@ -25,6 +25,7 @@ import coil.compose.AsyncImage
 import com.tripsyc.app.data.api.models.LockType
 import com.tripsyc.app.data.api.models.Trip
 import com.tripsyc.app.data.api.models.User
+import com.tripsyc.app.ui.common.ChalkDivider
 import com.tripsyc.app.ui.theme.*
 import com.tripsyc.app.ui.trip.TripTab
 
@@ -39,12 +40,20 @@ fun OverviewScreen(
     val isDateLocked = dateLock?.locked == true
     val isDestLocked = destLock?.locked == true
     val isConfirmed = isDateLocked && isDestLocked
+    val memberCount = trip.count?.members ?: trip.members?.size ?: 0
+
+    val currentStage = when {
+        isConfirmed -> 3
+        isDateLocked || isDestLocked -> 2
+        memberCount > 1 -> 1
+        else -> 0
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
-        // Hero image
+        // ── Hero cover image ──────────────────────────────────────────────
         item {
             Box(
                 modifier = Modifier
@@ -64,8 +73,19 @@ fun OverviewScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Brush.linearGradient(listOf(Coral, CoralLight)))
-                    )
+                            .background(Brush.linearGradient(listOf(Coral, CoralLight))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.White.copy(alpha = 0.3f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("T", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
                 Box(
                     modifier = Modifier
@@ -92,7 +112,7 @@ fun OverviewScreen(
                     )
                     if (!trip.approxMonth.isNullOrEmpty()) {
                         Text(
-                            text = "📅 ${trip.approxMonth}",
+                            text = trip.approxMonth,
                             color = Color.White.copy(alpha = 0.85f),
                             fontSize = 14.sp
                         )
@@ -101,7 +121,7 @@ fun OverviewScreen(
             }
         }
 
-        // Status + members section
+        // ── Progress strip ────────────────────────────────────────────────
         item {
             Surface(
                 modifier = Modifier
@@ -109,7 +129,86 @@ fun OverviewScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 shape = RoundedCornerShape(16.dp),
                 color = CardBackground,
-                shadowElevation = 2.dp
+                shadowElevation = 2.dp,
+                tonalElevation = 0.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Trip Progress",
+                        fontWeight = FontWeight.SemiBold,
+                        color = Chalk900
+                    )
+
+                    // 4-segment progress bar
+                    val stageLabels = listOf("Gather", "Vote", "Lock", "Go!")
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            for (i in 0 until 4) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(4.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(if (i <= currentStage) Coral else Chalk100)
+                                )
+                            }
+                        }
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            stageLabels.forEachIndexed { i, label ->
+                                Text(
+                                    text = label,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (i <= currentStage) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (i <= currentStage) Coral else Chalk400,
+                                    modifier = Modifier.weight(1f),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+
+                    ChalkDivider()
+
+                    // Checklist items
+                    listOf(
+                        Triple("Dates voted", isDateLocked, Dusk),
+                        Triple("Destination voted", isDestLocked, Coral),
+                        Triple("Fully confirmed", isConfirmed, Success)
+                    ).forEach { (label, done, color) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = label, color = Chalk900, fontSize = 14.sp)
+                            Icon(
+                                imageVector = if (done) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                contentDescription = null,
+                                tint = if (done) color else Chalk200,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Status + members card ─────────────────────────────────────────
+        item {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = CardBackground,
+                shadowElevation = 2.dp,
+                tonalElevation = 0.dp
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -126,16 +225,29 @@ fun OverviewScreen(
                             fontWeight = FontWeight.SemiBold,
                             color = Chalk900
                         )
-                        val statusText = when {
-                            isConfirmed -> "✅ Confirmed"
-                            isDateLocked && !isDestLocked -> "📅 Date Locked"
-                            !isDateLocked && isDestLocked -> "📍 Destination Locked"
-                            else -> "🗓️ Planning"
+                        val (statusText, statusColor) = when {
+                            isConfirmed -> "Confirmed" to Success
+                            isDateLocked && !isDestLocked -> "Date Locked" to Dusk
+                            !isDateLocked && isDestLocked -> "Dest Locked" to Coral
+                            memberCount > 1 -> "Voting" to Gold
+                            else -> "Gathering" to Coral
                         }
-                        Text(text = statusText, color = Chalk500, fontSize = 13.sp)
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(statusColor.copy(alpha = 0.1f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = statusText,
+                                color = statusColor,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
 
-                    Divider(color = Chalk200)
+                    ChalkDivider()
 
                     // Members row
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -188,7 +300,7 @@ fun OverviewScreen(
             }
         }
 
-        // Locked values if any
+        // ── Locked decisions ──────────────────────────────────────────────
         if (isDateLocked || isDestLocked) {
             item {
                 Surface(
@@ -197,7 +309,8 @@ fun OverviewScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                     shape = RoundedCornerShape(16.dp),
                     color = CardBackground,
-                    shadowElevation = 2.dp
+                    shadowElevation = 2.dp,
+                    tonalElevation = 0.dp
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -234,7 +347,7 @@ fun OverviewScreen(
             }
         }
 
-        // Quick action cards
+        // ── Quick action cards ────────────────────────────────────────────
         item {
             Column(
                 modifier = Modifier
@@ -251,7 +364,7 @@ fun OverviewScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     QuickActionCard(
                         icon = Icons.Default.CalendarMonth,
-                        label = "Set Dates",
+                        label = "Dates",
                         color = Dusk,
                         modifier = Modifier.weight(1f),
                         onClick = { onTabSelected(TripTab.Dates) }
@@ -266,61 +379,19 @@ fun OverviewScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     QuickActionCard(
-                        icon = Icons.Default.AttachMoney,
+                        icon = Icons.Default.AccountBalance,
                         label = "Budget",
                         color = Sage,
                         modifier = Modifier.weight(1f),
                         onClick = { onTabSelected(TripTab.Budget) }
                     )
                     QuickActionCard(
-                        icon = Icons.Default.Chat,
+                        icon = Icons.Default.ChatBubble,
                         label = "Chat",
                         color = Gold,
                         modifier = Modifier.weight(1f),
                         onClick = { onTabSelected(TripTab.Chat) }
                     )
-                }
-            }
-        }
-
-        // Trip progress
-        item {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = CardBackground,
-                shadowElevation = 2.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "Trip Progress",
-                        fontWeight = FontWeight.SemiBold,
-                        color = Chalk900
-                    )
-                    listOf(
-                        Triple("Dates voted", isDateLocked, Dusk),
-                        Triple("Destination voted", isDestLocked, Coral),
-                        Triple("Fully confirmed", isConfirmed, Success)
-                    ).forEach { (label, done, color) ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(text = label, color = Chalk900, fontSize = 14.sp)
-                            Icon(
-                                imageVector = if (done) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                                contentDescription = null,
-                                tint = if (done) color else Chalk200,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -339,6 +410,7 @@ private fun QuickActionCard(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
         color = color.copy(alpha = 0.1f),
+        tonalElevation = 0.dp,
         onClick = onClick
     ) {
         Row(

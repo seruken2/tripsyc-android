@@ -1,12 +1,14 @@
 package com.tripsyc.app.ui.trip
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,12 +36,13 @@ import com.tripsyc.app.ui.trip.responsibilities.ResponsibilitiesScreen
 import com.tripsyc.app.ui.trip.settings.TripSettingsScreen
 import kotlinx.coroutines.launch
 
+// Exactly 6 tabs matching iOS: Overview, Dates, Destinations, Budget, Chat, More
 enum class TripTab(val label: String, val icon: ImageVector) {
     Overview("Overview", Icons.Default.Home),
     Dates("Dates", Icons.Default.CalendarMonth),
     Destinations("Destinations", Icons.Default.Map),
-    Budget("Budget", Icons.Default.AttachMoney),
-    Chat("Chat", Icons.Default.Chat),
+    Budget("Budget", Icons.Default.AccountBalance),
+    Chat("Chat", Icons.Default.ChatBubble),
     More("More", Icons.Default.MoreHoriz)
 }
 
@@ -79,9 +82,7 @@ fun TripDetailScreen(
         }
     }
 
-    LaunchedEffect(trip.id) {
-        reloadTrip()
-    }
+    LaunchedEffect(trip.id) { reloadTrip() }
 
     // If a More tab is selected, show that screen
     if (selectedMoreTab != null) {
@@ -115,31 +116,57 @@ fun TripDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Chalk900
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Chalk50)
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = androidx.compose.ui.graphics.Color.White) {
-                TripTab.values().forEach { tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == tab,
-                        onClick = {
-                            selectedTab = tab
-                            reloadTrip()
-                        },
-                        icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(20.dp)) },
-                        label = { Text(tab.label, fontSize = 10.sp) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Coral,
-                            selectedTextColor = Coral,
-                            indicatorColor = Coral.copy(alpha = 0.12f),
-                            unselectedIconColor = Chalk400,
-                            unselectedTextColor = Chalk400
+            // White card bottom nav with top shadow — matches iOS TripTabBar
+            Surface(
+                color = Color.White,
+                shadowElevation = 8.dp,
+                tonalElevation = 0.dp
+            ) {
+                NavigationBar(
+                    containerColor = Color.White,
+                    tonalElevation = 0.dp
+                ) {
+                    TripTab.values().forEach { tab ->
+                        NavigationBarItem(
+                            selected = selectedTab == tab,
+                            onClick = {
+                                selectedTab = tab
+                                reloadTrip()
+                            },
+                            icon = {
+                                Icon(
+                                    tab.icon,
+                                    contentDescription = tab.label,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            },
+                            label = {
+                                Text(
+                                    tab.label,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (selectedTab == tab) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Coral,
+                                selectedTextColor = Coral,
+                                indicatorColor = Coral.copy(alpha = 0.12f),
+                                unselectedIconColor = Chalk400,
+                                unselectedTextColor = Chalk400
+                            )
                         )
-                    )
+                    }
                 }
             }
         },
@@ -219,11 +246,11 @@ fun MoreMenuScreen(
                 ) {
                     rowItems.forEach { (tab, icon, label) ->
                         Surface(
-                            modifier = Modifier
-                                .weight(1f),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
                             color = CardBackground,
                             shadowElevation = 2.dp,
+                            tonalElevation = 0.dp,
                             onClick = { onSelect(tab) }
                         ) {
                             Row(
@@ -235,7 +262,7 @@ fun MoreMenuScreen(
                                     imageVector = icon,
                                     contentDescription = label,
                                     tint = Coral,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                                 Text(
                                     text = label,
@@ -246,7 +273,6 @@ fun MoreMenuScreen(
                             }
                         }
                     }
-                    // Fill empty slot if odd
                     if (rowItems.size == 1) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
@@ -288,7 +314,11 @@ fun MoreTabScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Chalk900
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Chalk50)

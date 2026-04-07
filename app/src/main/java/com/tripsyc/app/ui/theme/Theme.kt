@@ -16,6 +16,7 @@ private val LightColorScheme = lightColorScheme(
     onPrimaryContainer = Chalk900,
     secondary = Dusk,
     onSecondary = CardBackground,
+    secondaryContainer = Dusk.copy(alpha = 0.12f),
     background = Chalk50,
     onBackground = Chalk900,
     surface = CardBackground,
@@ -23,8 +24,11 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = Chalk100,
     onSurfaceVariant = Chalk500,
     outline = Chalk200,
+    outlineVariant = Chalk100,
     error = Danger,
     onError = CardBackground,
+    tertiary = Sage,
+    onTertiary = CardBackground,
 )
 
 @Composable

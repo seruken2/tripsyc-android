@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -76,49 +77,65 @@ fun ChatScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Messages list
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Chalk50)
+    ) {
+        // ── Messages list ──────────────────────────────────────────────
         Box(modifier = Modifier.weight(1f)) {
-            if (isLoading) {
-                LoadingView("Loading messages...")
-            } else if (messages.isEmpty()) {
-                EmptyState(
+            when {
+                isLoading -> LoadingView("Loading messages...")
+                messages.isEmpty() -> EmptyState(
                     icon = "💬",
                     title = "No messages yet",
                     message = "Be the first to say something!"
                 )
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    if (nextCursor != null) {
-                        item {
-                            TextButton(
-                                onClick = { loadMessages(nextCursor) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Load earlier messages", color = Dusk)
+                else -> {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 12.dp, bottom = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        // Load earlier button
+                        if (nextCursor != null) {
+                            item {
+                                TextButton(
+                                    onClick = { loadMessages(nextCursor) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        "Load earlier messages",
+                                        color = Dusk,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
                         }
-                    }
-                    items(messages, key = { it.id }) { message ->
-                        val isMe = message.userId == currentUser?.id
-                        MessageBubble(
-                            message = message,
-                            isCurrentUser = isMe
-                        )
+
+                        items(messages, key = { it.id }) { message ->
+                            val isMe = message.userId == currentUser?.id
+                            MessageBubble(
+                                message = message,
+                                isCurrentUser = isMe,
+                                modifier = Modifier.padding(
+                                    horizontal = 12.dp,
+                                    vertical = 2.dp
+                                )
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // Compose bar
+        // ── Compose bar ────────────────────────────────────────────────
         Surface(
             color = Color.White,
-            shadowElevation = 4.dp
+            shadowElevation = 4.dp,
+            tonalElevation = 0.dp
         ) {
             Row(
                 modifier = Modifier
@@ -127,23 +144,43 @@ fun ChatScreen(
                     .navigationBarsPadding()
                     .imePadding(),
                 verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // Attachment button (matches iOS plus.circle.fill)
+                IconButton(
+                    onClick = { /* photo picker */ },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Attachment",
+                        tint = Chalk400,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // Text input field (pill style matching iOS)
                 OutlinedTextField(
                     value = messageText,
                     onValueChange = { messageText = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Message…") },
-                    maxLines = 4,
+                    placeholder = {
+                        Text("Message…", color = Chalk400, fontSize = 15.sp)
+                    },
+                    maxLines = 5,
                     shape = RoundedCornerShape(22.dp),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 15.sp, color = Chalk900),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Chalk400,
                         unfocusedBorderColor = Chalk200,
                         focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
+                        unfocusedContainerColor = Color.White,
+                        focusedTextColor = Chalk900,
+                        unfocusedTextColor = Chalk900
                     )
                 )
 
+                // Send button — coral when can send, chalk200 otherwise
                 val canSend = messageText.isNotBlank() && !isSending
                 IconButton(
                     onClick = {
@@ -157,15 +194,17 @@ fun ChatScreen(
                                     mapOf("tripId" to tripId, "text" to text)
                                 )
                                 messages = messages + sent
-                                listState.animateScrollToItem(messages.size - 1)
+                                if (messages.isNotEmpty()) {
+                                    listState.animateScrollToItem(messages.size - 1)
+                                }
                             } catch (_: Exception) {
-                                messageText = text // restore on failure
+                                messageText = text
                             }
                             isSending = false
                         }
                     },
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(36.dp)
                         .clip(CircleShape)
                         .background(if (canSend) Coral else Chalk200)
                 ) {
@@ -173,7 +212,7 @@ fun ChatScreen(
                         Icons.Default.Send,
                         contentDescription = "Send",
                         tint = if (canSend) Color.White else Chalk400,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -181,20 +220,21 @@ fun ChatScreen(
     }
 }
 
+// ── Message Bubble ─────────────────────────────────────────────────────────────
+
 @Composable
 private fun MessageBubble(
     message: ChatMessageWithUser,
-    isCurrentUser: Boolean
+    isCurrentUser: Boolean,
+    modifier: Modifier = Modifier
 ) {
-    val senderName = message.user.name
-        ?: message.user.email.substringBefore("@")
+    val senderName = message.user.name ?: message.user.email.substringBefore("@")
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
     ) {
+        // Sender name (shown above other user messages)
         if (!isCurrentUser) {
             Text(
                 text = senderName,
@@ -210,6 +250,7 @@ private fun MessageBubble(
             horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start,
             modifier = Modifier.fillMaxWidth()
         ) {
+            // Avatar for other users (left side)
             if (!isCurrentUser) {
                 Box(
                     modifier = Modifier
@@ -237,47 +278,44 @@ private fun MessageBubble(
                 Spacer(modifier = Modifier.width(6.dp))
             }
 
-            // Reply indicator
-            val replyColumn = @Composable {
-                if (message.replyTo != null) {
-                    Surface(
-                        shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
-                        color = if (isCurrentUser) Coral.copy(alpha = 0.15f) else Chalk100
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            Box(modifier = Modifier.widthIn(max = 280.dp)) {
+                Column(
+                    horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
+                ) {
+                    // Reply context
+                    if (message.replyTo != null) {
+                        Surface(
+                            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
+                            color = if (isCurrentUser) Coral.copy(alpha = 0.15f) else Chalk100
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(3.dp)
-                                    .height(24.dp)
-                                    .background(Coral, RoundedCornerShape(2.dp))
-                            )
-                            Column {
-                                val rName = message.replyTo.user.name
-                                    ?: message.replyTo.user.email.substringBefore("@")
-                                Text(text = rName, fontSize = 10.sp, color = Coral, fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    text = message.replyTo.text.take(80),
-                                    fontSize = 11.sp,
-                                    color = Chalk500,
-                                    maxLines = 1
+                            Row(
+                                modifier = Modifier.padding(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(3.dp)
+                                        .height(24.dp)
+                                        .background(Coral, RoundedCornerShape(2.dp))
                                 )
+                                Column {
+                                    val rName = message.replyTo.user.name
+                                        ?: message.replyTo.user.email.substringBefore("@")
+                                    Text(text = rName, fontSize = 10.sp, color = Coral, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        text = message.replyTo.text.take(80),
+                                        fontSize = 11.sp,
+                                        color = Chalk500,
+                                        maxLines = 1
+                                    )
+                                }
                             }
                         }
                     }
-                }
-            }
 
-            Box(
-                modifier = Modifier.widthIn(max = 280.dp)
-            ) {
-                Column(horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start) {
-                    if (message.replyTo != null) {
-                        replyColumn()
-                    }
-
+                    // Main bubble
+                    // Own messages: coral bg, white text
+                    // Other messages: white card, chalk900 text
                     Surface(
                         shape = RoundedCornerShape(
                             topStart = if (!isCurrentUser && message.replyTo == null) 4.dp else 12.dp,
@@ -286,7 +324,8 @@ private fun MessageBubble(
                             bottomEnd = 12.dp
                         ),
                         color = if (isCurrentUser) Coral else Color.White,
-                        shadowElevation = if (isCurrentUser) 0.dp else 1.dp
+                        shadowElevation = if (isCurrentUser) 0.dp else 1.dp,
+                        tonalElevation = 0.dp
                     ) {
                         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                             if (!message.imageUrl.isNullOrEmpty()) {
@@ -310,6 +349,7 @@ private fun MessageBubble(
                         }
                     }
 
+                    // Timestamp
                     if (message.createdAt != null) {
                         Text(
                             text = formatTime(message.createdAt),

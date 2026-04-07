@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.tripsyc.app.ui.theme.*
 
+// ── Loading ───────────────────────────────────────────────────────────────────
+
 @Composable
 fun LoadingScreen() {
     Box(
@@ -33,7 +35,7 @@ fun LoadingScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            CircularProgressIndicator(color = Coral)
+            CircularProgressIndicator(color = Coral, strokeWidth = 2.5.dp)
             Text(
                 text = "Loading...",
                 color = Chalk500,
@@ -53,11 +55,13 @@ fun LoadingView(message: String = "Loading...") {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            CircularProgressIndicator(color = Coral)
+            CircularProgressIndicator(color = Coral, strokeWidth = 2.5.dp)
             Text(text = message, color = Chalk500, fontSize = 14.sp)
         }
     }
 }
+
+// ── Error ─────────────────────────────────────────────────────────────────────
 
 @Composable
 fun ErrorView(
@@ -88,13 +92,16 @@ fun ErrorView(
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onRetry,
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Coral)
             ) {
-                Text("Try again")
+                Text("Try again", fontWeight = FontWeight.SemiBold)
             }
         }
     }
 }
+
+// ── Empty State ───────────────────────────────────────────────────────────────
 
 @Composable
 fun EmptyState(
@@ -111,10 +118,19 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(text = icon, fontSize = 48.sp)
+        // Icon in coral-tinted circle
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(Coral.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = icon, fontSize = 32.sp)
+        }
         Text(
             text = title,
-            fontSize = 18.sp,
+            fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
             color = Chalk900,
             textAlign = TextAlign.Center
@@ -131,11 +147,13 @@ fun EmptyState(
                 colors = ButtonDefaults.buttonColors(containerColor = Coral),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(actionLabel)
+                Text(actionLabel, fontWeight = FontWeight.SemiBold)
             }
         }
     }
 }
+
+// ── Avatar ────────────────────────────────────────────────────────────────────
 
 @Composable
 fun AvatarImage(
@@ -169,27 +187,33 @@ fun AvatarImage(
     }
 }
 
+// ── Status Badge (capsule, matches iOS) ──────────────────────────────────────
+
 @Composable
 fun StatusBadge(status: String) {
     val (color, label) = when (status.uppercase()) {
         "CONFIRMED" -> Pair(Success, "Confirmed")
-        "LOCKED" -> Pair(Gold, "Locked")
-        "VOTING" -> Pair(Dusk, "Voting")
-        else -> Pair(Coral, "Planning")
+        "LOCKED" -> Pair(Dusk, "Locked")
+        "VOTING" -> Pair(Gold, "Voting")
+        else -> Pair(Coral, "Gathering")
     }
-    Surface(
-        shape = RoundedCornerShape(6.dp),
-        color = color.copy(alpha = 0.15f)
+    // Capsule shape matching iOS
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.80f))
+            .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
         Text(
             text = label,
             color = color,
             fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+            fontWeight = FontWeight.Bold
         )
     }
 }
+
+// ── Section Header ────────────────────────────────────────────────────────────
 
 @Composable
 fun SectionHeader(title: String) {
@@ -202,6 +226,8 @@ fun SectionHeader(title: String) {
     )
 }
 
+// ── Card Surface (16dp rounded, white, subtle shadow) ────────────────────────
+
 @Composable
 fun CardSurface(
     modifier: Modifier = Modifier,
@@ -211,8 +237,20 @@ fun CardSurface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = CardBackground,
-        shadowElevation = 2.dp
+        shadowElevation = 2.dp,
+        tonalElevation = 0.dp
     ) {
         content()
     }
+}
+
+// ── Divider ───────────────────────────────────────────────────────────────────
+
+@Composable
+fun ChalkDivider(modifier: Modifier = Modifier) {
+    HorizontalDivider(
+        modifier = modifier,
+        thickness = 0.5.dp,
+        color = Chalk200
+    )
 }
