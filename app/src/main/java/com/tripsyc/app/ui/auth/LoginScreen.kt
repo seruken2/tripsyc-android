@@ -20,7 +20,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +34,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tripsyc.app.R
 import com.tripsyc.app.ui.theme.*
 
 @Composable
@@ -98,30 +102,26 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.padding(horizontal = 24.dp)
             ) {
-                // App icon — white rounded rect with "T" initial
-                Box(
+                // App icon
+                androidx.compose.foundation.Image(
+                    painter = painterResource(R.drawable.tripsyc_icon),
+                    contentDescription = "Tripsyc",
                     modifier = Modifier
                         .size(76.dp)
                         .shadow(elevation = 20.dp, shape = RoundedCornerShape(18.dp))
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Color.White.copy(alpha = 0.22f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "T",
-                        color = Color.White,
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                        .clip(RoundedCornerShape(18.dp)),
+                    contentScale = ContentScale.Fit
+                )
 
                 // Wordmark
-                Text(
-                    text = "Tripsyc",
-                    color = Color.White,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.5).sp
+                androidx.compose.foundation.Image(
+                    painter = painterResource(R.drawable.tripsyc_logo),
+                    contentDescription = "Tripsyc",
+                    modifier = Modifier
+                        .height(32.dp)
+                        .widthIn(max = 148.dp),
+                    colorFilter = ColorFilter.tint(Color.White),
+                    contentScale = ContentScale.Fit
                 )
 
                 // Tagline

@@ -1,5 +1,6 @@
 package com.tripsyc.app.ui.trips
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -18,9 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tripsyc.app.R
 import com.tripsyc.app.data.api.models.PendingInvite
 import com.tripsyc.app.data.api.models.Trip
 import com.tripsyc.app.data.api.models.User
@@ -80,13 +85,13 @@ fun TripsListScreen(
                             )
                         )
                     } else {
-                        // Centered wordmark — bold coral "Tripsyc"
-                        Text(
-                            text = "Tripsyc",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp,
-                            color = Coral,
-                            letterSpacing = (-0.5).sp
+                        // Centered wordmark — real logo image
+                        Image(
+                            painter = painterResource(R.drawable.tripsyc_logo),
+                            contentDescription = "Tripsyc",
+                            modifier = Modifier.height(22.dp),
+                            colorFilter = ColorFilter.tint(Coral),
+                            contentScale = ContentScale.Fit
                         )
                     }
                 },
@@ -359,21 +364,22 @@ private fun BrandedEmptyStateHero(onCreateTrip: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Box(
+            Image(
+                painter = painterResource(R.drawable.tripsyc_icon),
+                contentDescription = "Tripsyc",
                 modifier = Modifier
                     .size(72.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White.copy(alpha = 0.22f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("T", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-            }
-            Text(
-                text = "Tripsyc",
-                color = Color.White,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.5).sp
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Fit
+            )
+            Image(
+                painter = painterResource(R.drawable.tripsyc_logo),
+                contentDescription = "Tripsyc",
+                modifier = Modifier
+                    .height(28.dp)
+                    .widthIn(max = 160.dp),
+                colorFilter = ColorFilter.tint(Color.White),
+                contentScale = ContentScale.Fit
             )
             Text(
                 text = "Create a trip and invite your crew.",
