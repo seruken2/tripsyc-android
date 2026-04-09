@@ -34,6 +34,7 @@ import com.tripsyc.app.ui.trip.photos.PhotosScreen
 import com.tripsyc.app.ui.trip.polls.PollsScreen
 import com.tripsyc.app.ui.trip.responsibilities.ResponsibilitiesScreen
 import com.tripsyc.app.ui.trip.settings.TripSettingsScreen
+import com.tripsyc.app.ui.trip.unlock.UnlockVoteScreen
 import kotlinx.coroutines.launch
 
 // Exactly 6 tabs matching iOS: Overview, Dates, Destinations, Budget, Chat, More
@@ -48,7 +49,7 @@ enum class TripTab(val label: String, val icon: ImageVector) {
 
 enum class MoreTab {
     Expenses, Notes, Packing, Photos, Itinerary, Polls,
-    Responsibilities, Activity, Memories, Invite, Settings
+    Responsibilities, Activity, Memories, Invite, Settings, Unlock
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -210,7 +211,11 @@ fun MoreMenuScreen(
     trip: Trip,
     onSelect: (MoreTab) -> Unit
 ) {
-    val items = listOf(
+    val dateLock = trip.locks?.firstOrNull { it.lockType == LockType.DATE }
+    val destLock = trip.locks?.firstOrNull { it.lockType == LockType.DESTINATION }
+    val isAnyLocked = (dateLock?.locked == true) || (destLock?.locked == true)
+
+    val baseItems = listOf(
         Triple(MoreTab.Expenses, Icons.Default.AccountBalance, "Expenses"),
         Triple(MoreTab.Notes, Icons.Default.Note, "Notes"),
         Triple(MoreTab.Packing, Icons.Default.Luggage, "Packing"),
@@ -223,6 +228,11 @@ fun MoreMenuScreen(
         Triple(MoreTab.Invite, Icons.Default.PersonAdd, "Invite"),
         Triple(MoreTab.Settings, Icons.Default.Settings, "Settings"),
     )
+    val items = if (isAnyLocked) {
+        baseItems + Triple(MoreTab.Unlock, Icons.Default.LockOpen, "Unlock")
+    } else {
+        baseItems
+    }
 
     androidx.compose.foundation.lazy.LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -307,6 +317,7 @@ fun MoreTabScreen(
                             MoreTab.Memories -> "Memories"
                             MoreTab.Invite -> "Invite People"
                             MoreTab.Settings -> "Trip Settings"
+                            MoreTab.Unlock -> "Unlock Vote"
                         },
                         fontWeight = FontWeight.Bold,
                         color = Chalk900
@@ -350,6 +361,23 @@ fun MoreTabScreen(
                     currentUser = currentUser,
                     onBack = onBack
                 )
+                MoreTab.Unlock -> {
+                    val dateLock = trip.locks?.firstOrNull { it.lockType == LockType.DATE }
+                    val destLock = trip.locks?.firstOrNull { it.lockType == LockType.DESTINATION }
+                    val lockType = when {
+                        dateLock?.locked == true -> "DATE"
+                        destLock?.locked == true -> "DESTINATION"
+                        else -> "DATE"
+                    }
+                    val isOrganizer = trip.members?.firstOrNull { it.userId == currentUser?.id }
+                        ?.role?.let { it.name == "CREATOR" || it.name == "CO_ORGANIZER" } == true
+                    UnlockVoteScreen(
+                        tripId = trip.id,
+                        lockType = lockType,
+                        currentUser = currentUser,
+                        isOrganizer = isOrganizer
+                    )
+                }
             }
         }
     }

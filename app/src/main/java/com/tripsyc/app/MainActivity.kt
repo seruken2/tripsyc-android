@@ -1,5 +1,7 @@
 package com.tripsyc.app
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,8 +14,14 @@ import com.tripsyc.app.ui.theme.Chalk50
 import com.tripsyc.app.ui.theme.TripsycTheme
 
 class MainActivity : ComponentActivity() {
+
+    // Deep link / notification extras passed to navigation
+    private var pendingTripId: String? = null
+    private var pendingDeepLink: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
         enableEdgeToEdge()
         setContent {
             TripsycTheme {
@@ -21,9 +29,30 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Chalk50
                 ) {
-                    AppNavigation()
+                    AppNavigation(
+                        pendingTripId = pendingTripId,
+                        pendingDeepLink = pendingDeepLink
+                    )
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        // Handle notification tap with tripId extra
+        intent?.getStringExtra("tripId")?.let { tripId ->
+            pendingTripId = tripId
+        }
+
+        // Handle deep links: tripsyc://verify, tripsyc://join, https://www.tripsyc.com
+        val data: Uri? = intent?.data
+        if (data != null) {
+            pendingDeepLink = data.toString()
         }
     }
 }

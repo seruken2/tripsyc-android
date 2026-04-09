@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AirplanemodeActive
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,13 +16,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tripsyc.app.data.api.models.User
 import com.tripsyc.app.ui.calendar.CalendarScreen
+import com.tripsyc.app.ui.overview.GlobalOverviewScreen
 import com.tripsyc.app.ui.profile.ProfileScreen
 import com.tripsyc.app.ui.theme.Chalk400
 import com.tripsyc.app.ui.theme.Coral
 import com.tripsyc.app.ui.trips.TripsListScreen
 import com.tripsyc.app.ui.trips.TripsViewModel
 
-enum class MainTab { Trips, Calendar, Profile }
+enum class MainTab { Trips, Overview, Calendar, Profile }
 
 @Composable
 fun MainScreen(
@@ -57,6 +59,31 @@ fun MainScreen(
                                 "Trips",
                                 fontSize = 11.sp,
                                 fontWeight = if (selectedTab == MainTab.Trips) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Coral,
+                            selectedTextColor = Coral,
+                            indicatorColor = Coral.copy(alpha = 0.12f),
+                            unselectedIconColor = Chalk400,
+                            unselectedTextColor = Chalk400
+                        )
+                    )
+
+                    NavigationBarItem(
+                        selected = selectedTab == MainTab.Overview,
+                        onClick = { selectedTab = MainTab.Overview },
+                        icon = {
+                            Icon(
+                                Icons.Default.Dashboard,
+                                contentDescription = "Overview"
+                            )
+                        },
+                        label = {
+                            Text(
+                                "Overview",
+                                fontSize = 11.sp,
+                                fontWeight = if (selectedTab == MainTab.Overview) FontWeight.SemiBold else FontWeight.Normal
                             )
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -125,6 +152,9 @@ fun MainScreen(
             MainTab.Trips -> TripsListScreen(
                 viewModel = tripsViewModel,
                 currentUser = currentUser,
+                modifier = Modifier.padding(innerPadding)
+            )
+            MainTab.Overview -> GlobalOverviewScreen(
                 modifier = Modifier.padding(innerPadding)
             )
             MainTab.Calendar -> CalendarScreen(

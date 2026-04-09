@@ -139,6 +139,9 @@ interface ApiService {
     @HTTP(method = "DELETE", path = "api/expenses", hasBody = true)
     suspend fun deleteExpense(@Body body: Map<String, String>): Response<Unit>
 
+    @POST("api/expenses/settle")
+    suspend fun settleAll(@Body body: Map<String, String>): SettleAllResponse
+
     // ─── Chat ─────────────────────────────────────────────────────────────────
 
     @GET("api/chat")
@@ -250,6 +253,17 @@ interface ApiService {
     @POST("api/locks")
     suspend fun lockDecision(@Body body: Map<String, Any>): DecisionLock
 
+    // ─── Unlock Votes ─────────────────────────────────────────────────────────
+
+    @GET("api/unlock-votes")
+    suspend fun getUnlockVote(@Query("tripId") tripId: String): Response<UnlockVote?>
+
+    @POST("api/unlock-votes")
+    suspend fun requestUnlock(@Body body: Map<String, Any?>): UnlockVote
+
+    @PATCH("api/unlock-votes")
+    suspend fun castUnlockBallot(@Body body: Map<String, Any>): UnlockVote
+
     // ─── Photos ───────────────────────────────────────────────────────────────
 
     @GET("api/photos")
@@ -299,4 +313,17 @@ interface ApiService {
 
     @PATCH("api/notifications/preferences")
     suspend fun updateNotificationPrefs(@Body body: Map<String, String>): NotificationPref
+
+    // ─── Device Tokens (FCM) ──────────────────────────────────────────────────
+
+    @POST("api/device-tokens")
+    suspend fun registerDeviceToken(@Body body: Map<String, String>): Response<Unit>
+
+    @HTTP(method = "DELETE", path = "api/device-tokens", hasBody = true)
+    suspend fun unregisterDeviceToken(@Body body: Map<String, String>): Response<Unit>
+
+    // ─── Global Overview ──────────────────────────────────────────────────────
+
+    @GET("api/overview")
+    suspend fun getOverview(): OverviewData
 }

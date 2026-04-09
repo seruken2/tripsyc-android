@@ -30,7 +30,9 @@ data class User(
     val travelStyle: TravelStyle? = null,
     val currency: String? = null,
     val isAdmin: Boolean? = null,
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    val isImpersonating: Boolean? = null,
+    val realAdminEmail: String? = null
 )
 
 // ─── Trip ────────────────────────────────────────────────────────────────────
@@ -443,13 +445,14 @@ data class UnlockVote(
     val lockType: LockType,
     val requestedBy: String,
     val reason: String? = null,
-    val status: UnlockStatus,
+    val status: UnlockStatus = UnlockStatus.PENDING,
     val expiresAt: String,
     val createdAt: String? = null,
     val ballots: List<UnlockBallot>? = null,
     val ballotsCount: Int? = null,
     val approveCount: Int? = null,
-    val rejectCount: Int? = null
+    val rejectCount: Int? = null,
+    val memberCount: Int? = null
 )
 
 // ─── NotificationPref ────────────────────────────────────────────────────────

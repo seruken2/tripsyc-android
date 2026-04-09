@@ -42,6 +42,7 @@ fun ChatScreen(
     var messageText by remember { mutableStateOf("") }
     var isSending by remember { mutableStateOf(false) }
     var nextCursor by remember { mutableStateOf<String?>(null) }
+    var typingNames by remember { mutableStateOf<List<String>>(emptyList()) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
@@ -61,12 +62,46 @@ fun ChatScreen(
         }
     }
 
+    fun fetchTyping() {
+        scope.launch {
+            try {
+                val response = ApiClient.apiService.getTyping(tripId)
+                if (response.isSuccessful) {
+                    @Suppress("UNCHECKED_CAST")
+                    val typingMap = response.body() as? Map<String, Any> ?: emptyMap()
+                    // Response shape: { typingUsers: [ { name: "..." }, ... ] }
+                    @Suppress("UNCHECKED_CAST")
+                    val users = typingMap["typingUsers"] as? List<Map<String, Any>> ?: emptyList()
+                    typingNames = users.mapNotNull { it["name"] as? String }
+                        .filter { it.isNotEmpty() }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
     // Poll for new messages every 5 seconds
     LaunchedEffect(tripId) {
         loadMessages()
         while (true) {
             delay(5000)
             loadMessages()
+        }
+    }
+
+    // Poll for typing indicators every 3 seconds
+    LaunchedEffect(tripId) {
+        while (true) {
+            fetchTyping()
+            delay(3000)
+        }
+    }
+
+    // Send typing signal when text changes (debounced by just firing on change)
+    LaunchedEffect(messageText) {
+        if (messageText.isNotEmpty()) {
+            try {
+                ApiClient.apiService.sendTyping(mapOf("tripId" to tripId))
+            } catch (_: Exception) {}
         }
     }
 
@@ -128,6 +163,29 @@ fun ChatScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // ── Typing indicator ──────────────────────────────────────────────
+        if (typingNames.isNotEmpty()) {
+            val typingText = when (typingNames.size) {
+                1 -> "${typingNames[0]} is typing…"
+                2 -> "${typingNames[0]} and ${typingNames[1]} are typing…"
+                else -> "${typingNames.size} people are typing…"
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = typingText,
+                    fontSize = 12.sp,
+                    color = Chalk400,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                )
             }
         }
 

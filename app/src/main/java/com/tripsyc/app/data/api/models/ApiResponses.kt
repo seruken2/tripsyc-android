@@ -223,3 +223,98 @@ data class InviteActionResponse(
 data class OTPResponse(val success: Boolean, val error: String? = null)
 data class VerifyCodeResponse(val success: Boolean, val redirect: String? = null)
 data class MagicLinkResponse(val success: Boolean, val error: String? = null)
+
+// Settle all
+data class SettleAllResponse(val settled: Int, val message: String? = null)
+
+// Global Overview
+data class TripCostDestination(
+    val city: String,
+    val country: String,
+    val shortlisted: Boolean
+)
+
+data class TripCost(
+    val tripId: String,
+    val tripName: String,
+    val currency: String,
+    val coverImage: String? = null,
+    val approxMonth: String? = null,
+    val totalExpenses: Double = 0.0,
+    val myShare: Double = 0.0,
+    val iPaid: Double = 0.0,
+    val memberCount: Int = 0,
+    val myRole: String = "MEMBER",
+    val myRsvp: String? = null,
+    val status: String = "Planning",
+    val lockedDates: String? = null,
+    val lockedDestination: String? = null,
+    val destinations: List<TripCostDestination> = emptyList(),
+    val budgetMax: Double? = null,
+    val budgetType: String? = null
+)
+
+data class SettlementAmount(
+    val currency: String,
+    val amount: Double
+)
+
+data class OverviewSettlement(
+    val direction: String,
+    val personId: String,
+    val name: String,
+    val amount: Double,
+    val amounts: List<SettlementAmount>? = null,
+    val convertedTotal: Double? = null,
+    val displayCurrency: String? = null,
+    val tripNames: List<String> = emptyList()
+)
+
+data class TravelBuddy(
+    val name: String,
+    val count: Int,
+    val trips: List<String> = emptyList()
+)
+
+data class PackingAlert(
+    val tripId: String,
+    val tripName: String,
+    val unpacked: Int,
+    val total: Int
+)
+
+data class DeadlineAlert(
+    val tripId: String,
+    val tripName: String,
+    val type: String,
+    val daysLeft: Int
+)
+
+data class AvailAlert(
+    val tripId: String,
+    val tripName: String
+)
+
+data class OverviewRecentActivity(
+    val id: String,
+    val tripId: String,
+    val tripName: String,
+    val type: String,
+    val message: String,
+    val createdAt: String? = null
+)
+
+data class OverviewData(
+    val tripCosts: List<TripCost> = emptyList(),
+    val totalExpenses: Double = 0.0,
+    val totalOwed: Double = 0.0,
+    val totalOwedToYou: Double = 0.0,
+    val settlements: List<OverviewSettlement> = emptyList(),
+    val categoryBreakdown: Map<String, Double> = emptyMap(),
+    val travelBuddies: List<TravelBuddy> = emptyList(),
+    val packingAlerts: List<PackingAlert> = emptyList(),
+    val deadlineAlerts: List<DeadlineAlert> = emptyList(),
+    val availabilityAlerts: List<AvailAlert> = emptyList(),
+    val recentActivity: List<OverviewRecentActivity> = emptyList(),
+    val userCurrency: String = "USD"
+)

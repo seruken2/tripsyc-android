@@ -101,19 +101,49 @@ fun ExpensesScreen(
                         balances.forEach { balance ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "${balance.fromName} → ${balance.toName}",
-                                    color = Chalk900,
-                                    fontSize = 13.sp
-                                )
-                                Text(
-                                    text = "${response?.tripCurrency ?: tripCurrency} ${String.format("%.2f", balance.amount)}",
-                                    color = if (balance.from == currentUser?.id) Danger else Success,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "${balance.fromName} → ${balance.toName}",
+                                        color = Chalk900,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "${response?.tripCurrency ?: tripCurrency} ${String.format("%.2f", balance.amount)}",
+                                        color = if (balance.from == currentUser?.id) Danger else Success,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp
+                                    )
+                                    // Show Settle all button if current user is involved in this balance
+                                    if (balance.from == currentUser?.id || balance.to == currentUser?.id) {
+                                        TextButton(
+                                            onClick = {
+                                                scope.launch {
+                                                    try {
+                                                        ApiClient.apiService.settleAll(
+                                                            mapOf(
+                                                                "tripId" to tripId,
+                                                                "fromUserId" to balance.from,
+                                                                "toUserId" to balance.to
+                                                            )
+                                                        )
+                                                        load()
+                                                    } catch (_: Exception) {}
+                                                }
+                                            },
+                                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Settle all", color = Success, fontSize = 11.sp)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

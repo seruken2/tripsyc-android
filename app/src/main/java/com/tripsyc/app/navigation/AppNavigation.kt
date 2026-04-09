@@ -20,6 +20,7 @@ import com.tripsyc.app.ui.auth.OtpScreen
 import com.tripsyc.app.ui.main.MainScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.net.Uri
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -33,7 +34,10 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    pendingTripId: String? = null,
+    pendingDeepLink: String? = null
+) {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
 
@@ -71,6 +75,31 @@ fun AppNavigation() {
         // Show splash/loading while checking auth
         com.tripsyc.app.ui.common.LoadingScreen()
         return
+    }
+
+    // After auth determined, handle pending deep link/trip navigation
+    LaunchedEffect(startDestination) {
+        if (startDestination == Screen.Main.route) {
+            // Handle notification tripId — navigate to that trip
+            if (pendingTripId != null) {
+                navController.navigate(Screen.TripDetail.createRoute(pendingTripId))
+            }
+            // Handle deep link URIs
+            if (pendingDeepLink != null) {
+                val uri = Uri.parse(pendingDeepLink)
+                when {
+                    uri.scheme == "tripsyc" && uri.host == "join" -> {
+                        // tripsyc://join/{tripId}?code=X
+                        val tripId = uri.pathSegments.firstOrNull()
+                        if (tripId != null) {
+                            navController.navigate(Screen.TripDetail.createRoute(tripId))
+                        }
+                    }
+                    // tripsyc://verify handled by auth flow — no nav needed post-login
+                    else -> { /* no-op */ }
+                }
+            }
+        }
     }
 
     NavHost(navController = navController, startDestination = startDestination!!) {
@@ -111,6 +140,27 @@ fun AppNavigation() {
                     }
                 }
             )
+        }
+
+        composable(
+            route = Screen.TripDetail.route,
+            arguments = listOf(navArgument("tripId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val tripId = backStackEntry.arguments?.getString("tripId") ?: return@composable
+            // Load trip and show TripDetailScreen
+            var trip by remember { mutableStateOf<com.tripsyc.app.data.api.models.Trip?>(null) }
+            LaunchedEffect(tripId) {
+                try {
+                    trip = withContext(Dispatchers.IO) { ApiClient.apiService.getTrip(tripId) }
+                } catch (_: Exception) {}
+            }
+            trip?.let { t ->
+                com.tripsyc.app.ui.trip.TripDetailScreen(
+                    trip = t,
+                    currentUser = currentUser,
+                    onBack = { navController.popBackStack() }
+                )
+            } ?: com.tripsyc.app.ui.common.LoadingScreen()
         }
     }
 }
