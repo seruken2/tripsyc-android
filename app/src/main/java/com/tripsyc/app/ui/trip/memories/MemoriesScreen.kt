@@ -65,7 +65,7 @@ fun MemoriesScreen(tripId: String) {
                         if (!photo.caption.isNullOrEmpty()) {
                             Text(photo.caption, fontSize = 11.sp, color = Chalk500, modifier = Modifier.padding(top = 4.dp))
                         }
-                        val uploaderName = photo.user?.name ?: photo.user?.email?.substringBefore("@") ?: ""
+                        val uploaderName = photo.user?.name ?: ""
                         if (uploaderName.isNotEmpty()) {
                             Text("by $uploaderName", fontSize = 10.sp, color = Chalk400)
                         }

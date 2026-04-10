@@ -225,7 +225,7 @@ private fun ExpenseCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(expense.title, fontWeight = FontWeight.SemiBold, color = Chalk900)
                     Text(
-                        text = "Paid by ${expense.paidByUser.name ?: expense.paidByUser.email.substringBefore("@")}",
+                        text = "Paid by ${expense.paidByUser.name ?: "Someone"}",
                         fontSize = 12.sp, color = Chalk500
                     )
                     Text(
@@ -258,7 +258,7 @@ private fun ExpenseCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = split.user.name ?: split.user.email.substringBefore("@"),
+                            text = split.user.name ?: "Someone",
                             fontSize = 13.sp,
                             color = Chalk900
                         )

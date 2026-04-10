@@ -25,10 +25,11 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItineraryScreen(tripId: String) {
+fun ItineraryScreen(tripId: String, currentUser: com.tripsyc.app.data.api.models.User? = null) {
     var items by remember { mutableStateOf<List<ItineraryItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var showAddSheet by remember { mutableStateOf(false) }
+    var editingItem by remember { mutableStateOf<ItineraryItem?>(null) }
     val scope = rememberCoroutineScope()
 
     fun load() {
@@ -72,14 +73,18 @@ fun ItineraryScreen(tripId: String) {
             }
         } else {
             items(items) { item ->
-                ItineraryCard(item = item, onDelete = {
-                    scope.launch {
-                        try {
-                            ApiClient.apiService.deleteItineraryItem(mapOf("itemId" to item.id))
-                            load()
-                        } catch (_: Exception) {}
+                ItineraryCard(
+                    item = item,
+                    onEdit = { editingItem = item },
+                    onDelete = {
+                        scope.launch {
+                            try {
+                                ApiClient.apiService.deleteItineraryItem(mapOf("itemId" to item.id))
+                                load()
+                            } catch (_: Exception) {}
+                        }
                     }
-                })
+                )
             }
         }
     }
@@ -87,10 +92,14 @@ fun ItineraryScreen(tripId: String) {
     if (showAddSheet) {
         AddItinerarySheet(tripId = tripId, onDismiss = { showAddSheet = false }, onAdded = { load() })
     }
+
+    editingItem?.let { item ->
+        EditItinerarySheet(item = item, onDismiss = { editingItem = null }, onSaved = { editingItem = null; load() })
+    }
 }
 
 @Composable
-private fun ItineraryCard(item: ItineraryItem, onDelete: () -> Unit) {
+private fun ItineraryCard(item: ItineraryItem, onEdit: () -> Unit = {}, onDelete: () -> Unit) {
     val (icon, color) = categoryIconColor(item.category)
     Surface(shape = RoundedCornerShape(14.dp), color = CardBackground, shadowElevation = 2.dp) {
         Row(
@@ -118,8 +127,13 @@ private fun ItineraryCard(item: ItineraryItem, onDelete: () -> Unit) {
                     Text("Ref: ${item.confirmationCode}", fontSize = 11.sp, color = Chalk400)
                 }
             }
-            IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = null, tint = Chalk200, modifier = Modifier.size(16.dp))
+            Row {
+                IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Chalk400, modifier = Modifier.size(15.dp))
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Chalk200, modifier = Modifier.size(15.dp))
+                }
             }
         }
     }
@@ -205,6 +219,88 @@ private fun AddItinerarySheet(tripId: String, onDismiss: () -> Unit, onAdded: ()
             ) {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                 else Text("Add Item", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditItinerarySheet(item: ItineraryItem, onDismiss: () -> Unit, onSaved: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var title by remember { mutableStateOf(item.title) }
+    var location by remember { mutableStateOf(item.location ?: "") }
+    var date by remember { mutableStateOf(item.date?.take(10) ?: "") }
+    var time by remember { mutableStateOf(item.time ?: "") }
+    var confirmationCode by remember { mutableStateOf(item.confirmationCode ?: "") }
+    var description by remember { mutableStateOf(item.description ?: "") }
+    var selectedCategory by remember { mutableStateOf(item.category) }
+    var isLoading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Chalk50) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 48.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text("Edit Item", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Chalk900)
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(ItineraryCategory.values()) { cat ->
+                    FilterChip(
+                        selected = selectedCategory == cat,
+                        onClick = { selectedCategory = cat },
+                        label = { Text(cat.name.lowercase().replaceFirstChar { it.uppercase() }, fontSize = 11.sp) },
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Coral.copy(alpha = 0.15f), selectedLabelColor = Coral)
+                    )
+                }
+            }
+            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title *") },
+                modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Coral, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
+            OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("Location") },
+                modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Coral, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = date, onValueChange = { date = it }, label = { Text("Date") },
+                    modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Coral, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
+                OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time") },
+                    modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Coral, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
+            }
+            OutlinedTextField(value = confirmationCode, onValueChange = { confirmationCode = it }, label = { Text("Confirmation/Ref #") },
+                modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Coral, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
+            OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Notes") },
+                modifier = Modifier.fillMaxWidth(), maxLines = 3, shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Coral, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
+            if (error != null) Text(text = error!!, color = Danger, fontSize = 13.sp)
+            Button(
+                onClick = {
+                    if (title.isBlank()) { error = "Title required"; return@Button }
+                    scope.launch {
+                        isLoading = true
+                        try {
+                            ApiClient.apiService.updateItineraryItem(mapOf(
+                                "itemId" to item.id,
+                                "title" to title.trim(),
+                                "category" to selectedCategory.name,
+                                "location" to location.trim().ifEmpty { null },
+                                "date" to date.trim().ifEmpty { null },
+                                "time" to time.trim().ifEmpty { null },
+                                "confirmationCode" to confirmationCode.trim().ifEmpty { null },
+                                "description" to description.trim().ifEmpty { null }
+                            ))
+                            onSaved()
+                        } catch (e: Exception) { error = e.message }
+                        isLoading = false
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(52.dp), enabled = !isLoading,
+                shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Coral)
+            ) {
+                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                else Text("Save Changes", fontWeight = FontWeight.SemiBold)
             }
         }
     }

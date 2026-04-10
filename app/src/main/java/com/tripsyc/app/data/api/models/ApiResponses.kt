@@ -3,14 +3,12 @@ package com.tripsyc.app.data.api.models
 // Chat API response types
 data class ChatUser(
     val id: String,
-    val email: String,
     val name: String? = null,
     val avatarUrl: String? = null
 )
 
 data class ReplyUser(
     val id: String,
-    val email: String,
     val name: String? = null
 )
 
@@ -31,7 +29,8 @@ data class ChatMessageWithUser(
     val replyToId: String? = null,
     val replyTo: ReplyInfo? = null,
     val createdAt: String? = null,
-    val user: ChatUser
+    val user: ChatUser,
+    val reactions: List<GroupedReaction>? = null
 )
 
 data class MessagesResponse(
@@ -51,7 +50,6 @@ data class ReactionsResponse(
 
 data class ReadReceiptUser(
     val id: String,
-    val email: String,
     val name: String? = null,
     val avatarUrl: String? = null
 )
@@ -69,7 +67,6 @@ data class ReadReceiptsResponse(
 // Expense API response types
 data class SimpleUser(
     val id: String,
-    val email: String,
     val name: String? = null
 )
 

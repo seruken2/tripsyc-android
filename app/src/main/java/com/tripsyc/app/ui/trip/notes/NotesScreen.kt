@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,6 +31,7 @@ fun NotesScreen(tripId: String, currentUser: User?) {
     var notes by remember { mutableStateOf<List<Note>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var showAddSheet by remember { mutableStateOf(false) }
+    var editingNote by remember { mutableStateOf<Note?>(null) }
     val scope = rememberCoroutineScope()
 
     fun load() {
@@ -76,6 +78,7 @@ fun NotesScreen(tripId: String, currentUser: User?) {
                 NoteCard(
                     note = note,
                     isOwner = note.userId == currentUser?.id,
+                    onEdit = { editingNote = note },
                     onDelete = {
                         scope.launch {
                             try {
@@ -92,10 +95,18 @@ fun NotesScreen(tripId: String, currentUser: User?) {
     if (showAddSheet) {
         AddNoteSheet(tripId = tripId, onDismiss = { showAddSheet = false }, onAdded = { load() })
     }
+
+    editingNote?.let { note ->
+        EditNoteSheet(
+            note = note,
+            onDismiss = { editingNote = null },
+            onSaved = { editingNote = null; load() }
+        )
+    }
 }
 
 @Composable
-private fun NoteCard(note: Note, isOwner: Boolean, onDelete: () -> Unit) {
+private fun NoteCard(note: Note, isOwner: Boolean, onEdit: () -> Unit, onDelete: () -> Unit) {
     Surface(shape = RoundedCornerShape(14.dp), color = CardBackground, shadowElevation = 2.dp) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(
@@ -105,8 +116,13 @@ private fun NoteCard(note: Note, isOwner: Boolean, onDelete: () -> Unit) {
             ) {
                 Text(note.title, fontWeight = FontWeight.SemiBold, color = Chalk900, modifier = Modifier.weight(1f))
                 if (isOwner) {
-                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Danger, modifier = Modifier.size(16.dp))
+                    Row {
+                        IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Chalk500, modifier = Modifier.size(16.dp))
+                        }
+                        IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Danger, modifier = Modifier.size(16.dp))
+                        }
                     }
                 }
             }
@@ -119,7 +135,7 @@ private fun NoteCard(note: Note, isOwner: Boolean, onDelete: () -> Unit) {
                     Text(note.url, color = Dusk, fontSize = 12.sp, maxLines = 1)
                 }
             }
-            val author = note.user?.name ?: note.user?.email?.substringBefore("@") ?: ""
+            val author = note.user?.name ?: ""
             if (author.isNotEmpty()) {
                 Text("by $author", fontSize = 11.sp, color = Chalk400)
             }
@@ -174,6 +190,59 @@ private fun AddNoteSheet(tripId: String, onDismiss: () -> Unit, onAdded: () -> U
             ) {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                 else Text("Save Note", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditNoteSheet(note: Note, onDismiss: () -> Unit, onSaved: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var title by remember { mutableStateOf(note.title) }
+    var body by remember { mutableStateOf(note.body ?: "") }
+    var url by remember { mutableStateOf(note.url ?: "") }
+    var isLoading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Chalk50) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 48.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text("Edit Note", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Chalk900)
+            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title *") },
+                modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Coral, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
+            OutlinedTextField(value = body, onValueChange = { body = it }, label = { Text("Notes (optional)") },
+                modifier = Modifier.fillMaxWidth(), maxLines = 4, shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Coral, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
+            OutlinedTextField(value = url, onValueChange = { url = it }, label = { Text("Link (optional)") },
+                modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Coral, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
+            if (error != null) Text(text = error!!, color = Danger, fontSize = 13.sp)
+            Button(
+                onClick = {
+                    if (title.isBlank()) { error = "Title is required"; return@Button }
+                    scope.launch {
+                        isLoading = true
+                        try {
+                            ApiClient.apiService.updateNote(mapOf(
+                                "noteId" to note.id,
+                                "title" to title.trim(),
+                                "body" to body.trim().ifEmpty { null },
+                                "url" to url.trim().ifEmpty { null }
+                            ))
+                            onSaved()
+                        } catch (e: Exception) { error = e.message }
+                        isLoading = false
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(52.dp), enabled = !isLoading,
+                shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Coral)
+            ) {
+                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                else Text("Update Note", fontWeight = FontWeight.SemiBold)
             }
         }
     }

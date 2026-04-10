@@ -33,12 +33,14 @@ fun DestinationsScreen(
     tripId: String,
     isOrganizer: Boolean,
     existingLock: DecisionLock?,
-    destinationPhase: DestinationPhase?
+    destinationPhase: DestinationPhase?,
+    currentUser: com.tripsyc.app.data.api.models.User? = null
 ) {
     var destinations by remember { mutableStateOf<List<Destination>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var showAddSheet by remember { mutableStateOf(false) }
+    var selectedDestination by remember { mutableStateOf<Destination?>(null) }
     val scope = rememberCoroutineScope()
     val isLocked = existingLock?.locked == true
 
@@ -143,7 +145,8 @@ fun DestinationsScreen(
                                 loadDestinations()
                             } catch (_: Exception) {}
                         }
-                    }
+                    },
+                    onClick = { selectedDestination = dest }
                 )
             }
         }
@@ -156,13 +159,28 @@ fun DestinationsScreen(
             onAdded = { loadDestinations() }
         )
     }
+
+    // Navigate to destination detail
+    selectedDestination?.let { dest ->
+        DestinationDetailScreen(
+            destination = dest,
+            tripId = tripId,
+            currentUser = currentUser,
+            isLocked = isLocked,
+            onBack = {
+                selectedDestination = null
+                loadDestinations()
+            }
+        )
+    }
 }
 
 @Composable
 private fun DestinationCard(
     destination: Destination,
     isLocked: Boolean,
-    onVote: (VoteValue) -> Unit
+    onVote: (VoteValue) -> Unit,
+    onClick: () -> Unit = {}
 ) {
     val upVotes = destination.votes?.count { it.value == VoteValue.UP } ?: 0
     val downVotes = destination.votes?.count { it.value == VoteValue.DOWN } ?: 0
@@ -170,7 +188,8 @@ private fun DestinationCard(
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = CardBackground,
-        shadowElevation = 3.dp
+        shadowElevation = 3.dp,
+        onClick = onClick
     ) {
         Column {
             // Image

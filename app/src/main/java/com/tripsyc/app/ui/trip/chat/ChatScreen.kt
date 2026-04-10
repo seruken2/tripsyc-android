@@ -1,8 +1,11 @@
 package com.tripsyc.app.ui.trip.chat
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +35,9 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+private val QUICK_EMOJIS = listOf("❤️", "😂", "😮", "😢", "👍", "🔥", "🎉", "💯", "👀", "✈️")
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     tripId: String,
@@ -43,6 +49,7 @@ fun ChatScreen(
     var isSending by remember { mutableStateOf(false) }
     var nextCursor by remember { mutableStateOf<String?>(null) }
     var typingNames by remember { mutableStateOf<List<String>>(emptyList()) }
+    var reactionTargetMessage by remember { mutableStateOf<ChatMessageWithUser?>(null) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
@@ -82,6 +89,8 @@ fun ChatScreen(
     // Poll for new messages every 5 seconds
     LaunchedEffect(tripId) {
         loadMessages()
+        // Mark chat as read
+        try { ApiClient.apiService.markRead(mapOf("tripId" to tripId)) } catch (_: Exception) {}
         while (true) {
             delay(5000)
             loadMessages()
@@ -155,6 +164,8 @@ fun ChatScreen(
                             MessageBubble(
                                 message = message,
                                 isCurrentUser = isMe,
+                                currentUserId = currentUser?.id,
+                                onLongPress = { reactionTargetMessage = message },
                                 modifier = Modifier.padding(
                                     horizontal = 12.dp,
                                     vertical = 2.dp
@@ -278,18 +289,73 @@ fun ChatScreen(
     }
 }
 
+    // Emoji reaction picker
+    reactionTargetMessage?.let { targetMsg ->
+        ModalBottomSheet(
+            onDismissRequest = { reactionTargetMessage = null },
+            containerColor = Color.White
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("React", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 16.sp)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(QUICK_EMOJIS) { emoji ->
+                        val myReaction = targetMsg.reactions?.firstOrNull { r ->
+                            r.emoji == emoji && r.userIds.contains(currentUser?.id)
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = if (myReaction != null) Coral.copy(alpha = 0.15f) else Chalk100,
+                            modifier = Modifier.size(48.dp),
+                            onClick = {
+                                reactionTargetMessage = null
+                                scope.launch {
+                                    try {
+                                        if (myReaction != null) {
+                                            ApiClient.apiService.removeReaction(
+                                                mapOf("messageId" to targetMsg.id, "emoji" to emoji)
+                                            )
+                                        } else {
+                                            ApiClient.apiService.addReaction(
+                                                mapOf("messageId" to targetMsg.id, "emoji" to emoji, "tripId" to tripId)
+                                            )
+                                        }
+                                        loadMessages()
+                                    } catch (_: Exception) {}
+                                }
+                            }
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                Text(emoji, fontSize = 22.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ── Message Bubble ─────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageBubble(
     message: ChatMessageWithUser,
     isCurrentUser: Boolean,
+    currentUserId: String? = null,
+    onLongPress: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val senderName = message.user.name ?: message.user.email.substringBefore("@")
+    val senderName = message.user.name ?: "Someone"
 
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().combinedClickable(
+            onClick = {},
+            onLongClick = onLongPress
+        ),
         horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
     ) {
         // Sender name (shown above other user messages)
@@ -357,8 +423,7 @@ private fun MessageBubble(
                                         .background(Coral, RoundedCornerShape(2.dp))
                                 )
                                 Column {
-                                    val rName = message.replyTo.user.name
-                                        ?: message.replyTo.user.email.substringBefore("@")
+                                    val rName = message.replyTo.user.name ?: "Someone"
                                     Text(text = rName, fontSize = 10.sp, color = Coral, fontWeight = FontWeight.SemiBold)
                                     Text(
                                         text = message.replyTo.text.take(80),
@@ -415,6 +480,30 @@ private fun MessageBubble(
                             color = Chalk400,
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                         )
+                    }
+
+                    // Reactions
+                    val reactions = message.reactions?.filter { it.count > 0 }
+                    if (!reactions.isNullOrEmpty()) {
+                        androidx.compose.foundation.lazy.LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        ) {
+                            items(reactions) { reaction ->
+                                val iMine = reaction.userIds.contains(currentUserId)
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (iMine) Coral.copy(alpha = 0.15f) else Chalk100,
+                                    border = if (iMine) androidx.compose.foundation.BorderStroke(1.dp, Coral.copy(alpha = 0.4f)) else null
+                                ) {
+                                    Text(
+                                        text = "${reaction.emoji} ${reaction.count}",
+                                        fontSize = 11.sp,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

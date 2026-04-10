@@ -27,6 +27,8 @@ val Chalk400 = Color(0xFF9A9088)
 val Chalk500 = Color(0xFF7A7470)
 /** Chalk600 */
 val Chalk600 = Color(0xFF5C5550)
+/** Chalk700 */
+val Chalk700 = Color(0xFF3D3936)
 /** Primary text */
 val Chalk900 = Color(0xFF1A1714)
 

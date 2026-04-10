@@ -190,7 +190,8 @@ fun TripDetailScreen(
                     tripId = freshTrip.id,
                     isOrganizer = isOrganizer,
                     existingLock = destLock,
-                    destinationPhase = freshTrip.destinationPhase
+                    destinationPhase = freshTrip.destinationPhase,
+                    currentUser = currentUser
                 )
                 TripTab.Budget -> BudgetScreen(tripId = freshTrip.id)
                 TripTab.Chat -> ChatScreen(
@@ -346,8 +347,8 @@ fun MoreTabScreen(
                 )
                 MoreTab.Notes -> NotesScreen(tripId = trip.id, currentUser = currentUser)
                 MoreTab.Packing -> PackingScreen(tripId = trip.id)
-                MoreTab.Photos -> PhotosScreen(tripId = trip.id)
-                MoreTab.Itinerary -> ItineraryScreen(tripId = trip.id)
+                MoreTab.Photos -> PhotosScreen(tripId = trip.id, currentUser = currentUser)
+                MoreTab.Itinerary -> ItineraryScreen(tripId = trip.id, currentUser = currentUser)
                 MoreTab.Polls -> PollsScreen(tripId = trip.id, currentUser = currentUser)
                 MoreTab.Responsibilities -> ResponsibilitiesScreen(
                     tripId = trip.id,

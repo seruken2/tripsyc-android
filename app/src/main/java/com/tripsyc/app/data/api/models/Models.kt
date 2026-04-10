@@ -134,7 +134,6 @@ data class Vote(
 
 data class CommentUser(
     val id: String,
-    val email: String,
     val name: String? = null,
     val avatarUrl: String? = null
 )
@@ -294,7 +293,6 @@ data class Activity(
 
 data class NoteUser(
     val id: String,
-    val email: String,
     val name: String? = null
 )
 
@@ -336,7 +334,6 @@ data class Responsibility(
 
 data class PhotoUser(
     val id: String,
-    val email: String,
     val name: String? = null,
     val avatarUrl: String? = null
 )
