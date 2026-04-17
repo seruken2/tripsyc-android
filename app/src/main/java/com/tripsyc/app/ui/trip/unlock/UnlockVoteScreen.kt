@@ -486,7 +486,7 @@ private fun PendingVoteSection(
                     enabled = !isActing,
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedButtonDefaults.outlinedButtonColors(contentColor = Chalk900),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Chalk900),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Chalk300)
                 ) {
                     Icon(

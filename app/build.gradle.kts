@@ -1,9 +1,25 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services")
 }
+
+// Only apply google-services plugin when the config file is present, so the
+// project builds without Firebase keys during local dev / CI smoke tests.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
+// Load signing credentials from keystore.properties (gitignored) or env vars.
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) load(FileInputStream(f))
+}
+fun secret(key: String): String? =
+    keystoreProps.getProperty(key) ?: System.getenv(key)
 
 android {
     namespace = "com.tripsyc.app"
@@ -21,13 +37,35 @@ android {
         buildConfigField("String", "BASE_URL", "\"https://www.tripsyc.com\"")
     }
 
+    signingConfigs {
+        create("release") {
+            val storePath = secret("TRIPSYC_STORE_FILE")
+            if (!storePath.isNullOrBlank()) {
+                storeFile = file(storePath)
+                storePassword = secret("TRIPSYC_STORE_PASSWORD")
+                keyAlias = secret("TRIPSYC_KEY_ALIAS")
+                keyPassword = secret("TRIPSYC_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            isDebuggable = true
+        }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Only attach the signing config if a keystore was provided;
+            // this lets `assembleRelease` still run (unsigned) on CI without secrets.
+            if (!secret("TRIPSYC_STORE_FILE").isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

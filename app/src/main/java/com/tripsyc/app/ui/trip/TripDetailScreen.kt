@@ -35,6 +35,9 @@ import com.tripsyc.app.ui.trip.polls.PollsScreen
 import com.tripsyc.app.ui.trip.responsibilities.ResponsibilitiesScreen
 import com.tripsyc.app.ui.trip.settings.TripSettingsScreen
 import com.tripsyc.app.ui.trip.unlock.UnlockVoteScreen
+import com.tripsyc.app.ui.trip.summary.TripSummaryScreen
+import com.tripsyc.app.ui.trip.group.GroupProfileScreen
+import com.tripsyc.app.ui.trip.guide.TripGuideScreen
 import kotlinx.coroutines.launch
 
 // Exactly 6 tabs matching iOS: Overview, Dates, Destinations, Budget, Chat, More
@@ -49,7 +52,8 @@ enum class TripTab(val label: String, val icon: ImageVector) {
 
 enum class MoreTab {
     Expenses, Notes, Packing, Photos, Itinerary, Polls,
-    Responsibilities, Activity, Memories, Invite, Settings, Unlock
+    Responsibilities, Activity, Memories, Invite, Settings, Unlock,
+    Summary, GroupProfile, Guide
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -216,16 +220,24 @@ fun MoreMenuScreen(
     val destLock = trip.locks?.firstOrNull { it.lockType == LockType.DESTINATION }
     val isAnyLocked = (dateLock?.locked == true) || (destLock?.locked == true)
 
-    val baseItems = listOf(
-        Triple(MoreTab.Expenses, Icons.Default.AccountBalance, "Expenses"),
+    val isFullyLocked = (dateLock?.locked == true) && (destLock?.locked == true)
+    val baseItems = mutableListOf(
+        Triple(MoreTab.Polls, Icons.Default.Poll, "Polls"),
         Triple(MoreTab.Notes, Icons.Default.Note, "Notes"),
         Triple(MoreTab.Packing, Icons.Default.Luggage, "Packing"),
-        Triple(MoreTab.Photos, Icons.Default.PhotoLibrary, "Photos"),
         Triple(MoreTab.Itinerary, Icons.Default.ListAlt, "Itinerary"),
-        Triple(MoreTab.Polls, Icons.Default.Poll, "Polls"),
-        Triple(MoreTab.Responsibilities, Icons.Default.CheckCircle, "Responsibilities"),
-        Triple(MoreTab.Activity, Icons.Default.Notifications, "Activity"),
+        Triple(MoreTab.Guide, Icons.Default.Book, "Trip Guide"),
+        Triple(MoreTab.Expenses, Icons.Default.AccountBalance, "Expenses"),
+        Triple(MoreTab.Photos, Icons.Default.PhotoLibrary, "Photos"),
+        Triple(MoreTab.Responsibilities, Icons.Default.CheckCircle, "Tasks"),
         Triple(MoreTab.Memories, Icons.Default.Favorite, "Memories"),
+    )
+    if (isFullyLocked) {
+        baseItems += Triple(MoreTab.Summary, Icons.Default.Verified, "Trip Summary")
+    }
+    baseItems += listOf(
+        Triple(MoreTab.GroupProfile, Icons.Default.Groups, "Group Profile"),
+        Triple(MoreTab.Activity, Icons.Default.Notifications, "Activity"),
         Triple(MoreTab.Invite, Icons.Default.PersonAdd, "Invite"),
         Triple(MoreTab.Settings, Icons.Default.Settings, "Settings"),
     )
@@ -313,12 +325,15 @@ fun MoreTabScreen(
                             MoreTab.Photos -> "Photos"
                             MoreTab.Itinerary -> "Itinerary"
                             MoreTab.Polls -> "Polls"
-                            MoreTab.Responsibilities -> "Responsibilities"
+                            MoreTab.Responsibilities -> "Tasks"
                             MoreTab.Activity -> "Activity"
                             MoreTab.Memories -> "Memories"
                             MoreTab.Invite -> "Invite People"
                             MoreTab.Settings -> "Trip Settings"
                             MoreTab.Unlock -> "Unlock Vote"
+                            MoreTab.Summary -> "Trip Summary"
+                            MoreTab.GroupProfile -> "Group Profile"
+                            MoreTab.Guide -> "Trip Guide"
                         },
                         fontWeight = FontWeight.Bold,
                         color = Chalk900
@@ -362,6 +377,9 @@ fun MoreTabScreen(
                     currentUser = currentUser,
                     onBack = onBack
                 )
+                MoreTab.Summary -> TripSummaryScreen(trip = trip)
+                MoreTab.GroupProfile -> GroupProfileScreen(tripId = trip.id)
+                MoreTab.Guide -> TripGuideScreen(tripId = trip.id)
                 MoreTab.Unlock -> {
                     val dateLock = trip.locks?.firstOrNull { it.lockType == LockType.DATE }
                     val destLock = trip.locks?.firstOrNull { it.lockType == LockType.DESTINATION }

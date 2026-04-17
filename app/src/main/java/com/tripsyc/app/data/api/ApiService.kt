@@ -14,9 +14,6 @@ interface ApiService {
     @POST("api/auth/verify-otp")
     suspend fun verifyOtp(@Body body: Map<String, String>): VerifyCodeResponse
 
-    @POST("api/auth/magic-link")
-    suspend fun sendMagicLink(@Body body: Map<String, String>): MagicLinkResponse
-
     @GET("api/auth/me")
     suspend fun getCurrentUser(): Response<User?>
 
@@ -278,6 +275,36 @@ interface ApiService {
     @HTTP(method = "DELETE", path = "api/photos", hasBody = true)
     suspend fun deletePhoto(@Body body: Map<String, String>): Response<Unit>
 
+    @POST("api/photos/reactions")
+    suspend fun togglePhotoReaction(@Body body: Map<String, String>): PhotoReactionToggleResponse
+
+    @GET("api/photos/comments")
+    suspend fun getPhotoComments(@Query("photoId") photoId: String): PhotoCommentsResponse
+
+    @POST("api/photos/comments")
+    suspend fun addPhotoComment(@Body body: Map<String, String>): PhotoComment
+
+    @HTTP(method = "DELETE", path = "api/photos/comments", hasBody = true)
+    suspend fun deletePhotoComment(@Body body: Map<String, String>): Response<Unit>
+
+    @GET("api/photos/albums")
+    suspend fun getPhotoAlbums(@Query("tripId") tripId: String): PhotoAlbumsResponse
+
+    @POST("api/photos/albums")
+    suspend fun createPhotoAlbum(@Body body: Map<String, String>): PhotoAlbum
+
+    @PATCH("api/photos/albums")
+    suspend fun updatePhotoAlbum(@Body body: Map<String, Any?>): PhotoAlbum
+
+    @HTTP(method = "DELETE", path = "api/photos/albums", hasBody = true)
+    suspend fun deletePhotoAlbum(@Body body: Map<String, String>): Response<Unit>
+
+    @POST("api/photos/highlights")
+    suspend fun togglePhotoHighlight(@Body body: Map<String, String>): PhotoHighlightToggleResponse
+
+    @GET("api/photos/download")
+    suspend fun getPhotoDownloadList(@Query("tripId") tripId: String): PhotoDownloadResponse
+
     // ─── Activity ─────────────────────────────────────────────────────────────
 
     @GET("api/activity/{tripId}")
@@ -326,4 +353,20 @@ interface ApiService {
 
     @GET("api/overview")
     suspend fun getOverview(): OverviewData
+
+    // ─── Weather ──────────────────────────────────────────────────────────────
+
+    @GET("api/weather")
+    suspend fun getWeather(
+        @Query("city") city: String,
+        @Query("country") country: String? = null,
+        @Query("startDate") startDate: String? = null,
+        @Query("endDate") endDate: String? = null
+    ): WeatherResponse
+
+    // ─── Group Profile ────────────────────────────────────────────────────────
+
+    @GET("api/group-profile")
+    suspend fun getGroupProfile(@Query("tripId") tripId: String): GroupProfile
+
 }

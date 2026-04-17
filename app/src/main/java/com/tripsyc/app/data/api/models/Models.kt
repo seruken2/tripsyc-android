@@ -338,12 +338,50 @@ data class PhotoUser(
     val avatarUrl: String? = null
 )
 
+data class ReactionSummary(
+    val emoji: String,
+    val count: Int,
+    val mine: Boolean
+)
+
 data class TripPhoto(
     val id: String,
     val tripId: String,
     val userId: String,
     val url: String,
     val caption: String? = null,
+    val mediaType: String? = null,
+    val locationName: String? = null,
+    val albumId: String? = null,
+    val isHighlight: Boolean? = null,
+    val highlightVotes: Int? = null,
+    val createdAt: String? = null,
+    val user: PhotoUser? = null,
+    val reactions: List<ReactionSummary>? = null,
+    val commentCount: Int? = null
+) {
+    val isVideo: Boolean get() = mediaType == "video"
+}
+
+data class PhotoAlbumCount(val photos: Int)
+
+data class PhotoAlbum(
+    val id: String,
+    val tripId: String,
+    val name: String,
+    val coverUrl: String? = null,
+    val sortOrder: Int? = null,
+    val createdAt: String? = null,
+    @com.google.gson.annotations.SerializedName("_count") val count: PhotoAlbumCount? = null
+) {
+    val photoCount: Int get() = count?.photos ?: 0
+}
+
+data class PhotoComment(
+    val id: String,
+    val photoId: String,
+    val userId: String,
+    val text: String,
     val createdAt: String? = null,
     val user: PhotoUser? = null
 )
@@ -459,6 +497,112 @@ data class NotificationPref(
     val userId: String,
     val tripId: String,
     val mode: NotificationMode
+)
+
+// ─── Weather ─────────────────────────────────────────────────────────────────
+
+data class WeatherDay(
+    val day: String,
+    val temp: Int,
+    val low: Int? = null,
+    val icon: String,
+    val description: String? = null,
+    val precip: Double? = null
+)
+
+data class WeatherCurrent(
+    val temp: Int,
+    val description: String,
+    val icon: String
+)
+
+data class WeatherMatched(
+    val city: String,
+    val country: String,
+    val admin1: String? = null,
+    val countryMismatch: Boolean
+)
+
+data class WeatherResponse(
+    val historical: Boolean,
+    val current: WeatherCurrent,
+    val forecast: List<WeatherDay>,
+    val matched: WeatherMatched? = null
+)
+
+// ─── GroupProfile ────────────────────────────────────────────────────────────
+
+data class MemberBudgetRange(
+    val name: String,
+    val min: Int? = null,
+    val max: Int? = null,
+    val currency: String
+)
+
+data class NamedPref(val name: String, val pref: String)
+data class NamedLevel(val name: String, val level: String)
+data class NamedStyle(val name: String, val style: String)
+data class InterestCount(val interest: String, val count: Int)
+data class NamedAirport(val name: String, val airport: String)
+data class LangCount(val lang: String, val count: Int)
+data class NamedNationality(val name: String, val nationality: String)
+data class PassportWarning(val name: String, val expiry: String, val daysUntilTrip: Int? = null)
+data class MemberCountriesVisited(val name: String, val countries: List<String>)
+data class MemberBucketList(val name: String, val items: List<String>)
+data class NamedSeat(val name: String, val seat: String)
+data class NamedTag(val name: String, val tag: String)
+data class GroupHardNo(val item: String, val names: List<String>)
+data class GroupAllergy(val allergy: String, val names: List<String>)
+data class BirthdayInTrip(val name: String, val month: Int, val day: Int)
+data class BlackoutRange(val start: String, val end: String)
+data class MemberBlackout(val name: String, val ranges: List<BlackoutRange>)
+data class MemberPTOLimit(val name: String, val ptoRemainingDays: Int)
+data class EmergencyContact(
+    val memberName: String,
+    val contactName: String,
+    val contactPhone: String? = null,
+    val bloodType: String? = null,
+    val medicalNotes: String? = null,
+    val insuranceProvider: String? = null
+)
+
+data class GroupProfile(
+    val memberCount: Int,
+    val isOrganizer: Boolean,
+    val dietaryNeeds: List<String> = emptyList(),
+    val budgetRanges: List<MemberBudgetRange> = emptyList(),
+    val splitPreferences: List<NamedPref> = emptyList(),
+    val dominantSplitPreference: String? = null,
+    val cashPreferences: List<NamedPref> = emptyList(),
+    val commonInterests: List<InterestCount> = emptyList(),
+    val activityLevels: List<NamedLevel> = emptyList(),
+    val hasActivityConflict: Boolean = false,
+    val planningStyles: List<NamedStyle> = emptyList(),
+    val hasPlanningConflict: Boolean = false,
+    val tripDurationPrefs: List<NamedPref> = emptyList(),
+    val roomingAlerts: List<String> = emptyList(),
+    val accommodationPrefs: List<NamedPref> = emptyList(),
+    val flexibleWorkers: List<String> = emptyList(),
+    val officeWorkers: List<String> = emptyList(),
+    val drivers: List<String> = emptyList(),
+    val carOwners: List<String>? = null,
+    val homeAirports: List<NamedAirport> = emptyList(),
+    val sharedLanguages: List<LangCount> = emptyList(),
+    val nationalities: List<NamedNationality> = emptyList(),
+    val passportWarnings: List<PassportWarning> = emptyList(),
+    val flightSeatPrefs: List<NamedSeat>? = null,
+    val groupHardNos: List<GroupHardNo>? = null,
+    val environmentalAllergies: List<GroupAllergy>? = null,
+    val photoPermissionPrefs: List<NamedPref>? = null,
+    val walkingComforts: List<NamedPref>? = null,
+    val walkingComfortFloor: NamedPref? = null,
+    val travelPersonaTags: List<NamedTag>? = null,
+    val birthdaysInTrip: List<BirthdayInTrip>? = null,
+    val memberBlackouts: List<MemberBlackout>? = null,
+    val memberPTOLimits: List<MemberPTOLimit>? = null,
+    val emergencyContacts: List<EmergencyContact> = emptyList(),
+    val memberCountriesVisited: List<MemberCountriesVisited> = emptyList(),
+    val memberBucketList: List<MemberBucketList> = emptyList()
 )
 
 // ─── API Response Wrappers ───────────────────────────────────────────────────

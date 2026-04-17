@@ -184,6 +184,36 @@ data class UploadUrlResponse(
     val blobUrl: String
 )
 
+data class PhotoAlbumsResponse(
+    val albums: List<PhotoAlbum>
+)
+
+data class PhotoCommentsResponse(
+    val comments: List<PhotoComment>
+)
+
+data class PhotoReactionToggleResponse(
+    val toggled: String,
+    val emoji: String
+)
+
+data class PhotoHighlightToggleResponse(
+    val toggled: String,
+    val highlightVotes: Int? = null,
+    val isHighlight: Boolean? = null
+)
+
+data class DownloadPhoto(
+    val id: String,
+    val url: String,
+    val filename: String
+)
+
+data class PhotoDownloadResponse(
+    val tripName: String,
+    val photos: List<DownloadPhoto>
+)
+
 // Polls
 data class PollOptionWithVotes(
     val id: String,
@@ -219,7 +249,6 @@ data class InviteActionResponse(
 // Auth
 data class OTPResponse(val success: Boolean, val error: String? = null)
 data class VerifyCodeResponse(val success: Boolean, val redirect: String? = null)
-data class MagicLinkResponse(val success: Boolean, val error: String? = null)
 
 // Settle all
 data class SettleAllResponse(val settled: Int, val message: String? = null)

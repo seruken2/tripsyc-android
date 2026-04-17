@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -29,6 +31,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.tripsyc.app.data.api.ApiClient
+import com.tripsyc.app.data.api.models.PhotoComment
+import com.tripsyc.app.data.api.models.ReactionSummary
 import com.tripsyc.app.data.api.models.TripPhoto
 import com.tripsyc.app.data.api.models.User
 import com.tripsyc.app.ui.common.EmptyState
@@ -236,6 +240,10 @@ fun PhotosScreen(tripId: String, currentUser: User? = null) {
             onDeleted = {
                 photos = photos.filter { it.id != photo.id }
                 selectedPhoto = null
+            },
+            onPhotoUpdated = { updated ->
+                photos = photos.map { if (it.id == updated.id) updated else it }
+                selectedPhoto = updated
             }
         )
     }
@@ -272,15 +280,19 @@ private suspend fun uploadPhoto(context: Context, uri: Uri, tripId: String): Str
 
 // ── Fullscreen photo dialog ────────────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PhotoDetailDialog(
     photo: TripPhoto,
     currentUser: User?,
     onDismiss: () -> Unit,
-    onDeleted: () -> Unit
+    onDeleted: () -> Unit,
+    onPhotoUpdated: (TripPhoto) -> Unit = {}
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
+    var showReactionPicker by remember { mutableStateOf(false) }
+    var showComments by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val canDelete = photo.userId == currentUser?.id
 
@@ -291,7 +303,6 @@ private fun PhotoDetailDialog(
         Box(
             modifier = Modifier.fillMaxSize().background(Color.Black)
         ) {
-            // Photo
             AsyncImage(
                 model = photo.url,
                 contentDescription = photo.caption,
@@ -326,35 +337,134 @@ private fun PhotoDetailDialog(
                 }
             }
 
-            // Caption + info at bottom
-            if (!photo.caption.isNullOrEmpty() || photo.user != null) {
-                Column(
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(Color.Transparent, Color.Black.copy(0.7f))
-                            )
-                        )
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    if (!photo.caption.isNullOrEmpty()) {
-                        Text(photo.caption, color = Color.White, fontSize = 15.sp)
+            // Right action rail (highlight, react, comment)
+            Column(
+                modifier = Modifier.align(Alignment.CenterEnd)
+                    .padding(end = 12.dp)
+                    .navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                ActionPill(
+                    icon = if (photo.isHighlight == true) Icons.Default.Star else Icons.Default.StarBorder,
+                    label = (photo.highlightVotes ?: 0).toString(),
+                    tint = if (photo.isHighlight == true) Gold else Color.White,
+                    onClick = {
+                        scope.launch {
+                            try {
+                                val r = ApiClient.apiService.togglePhotoHighlight(mapOf("photoId" to photo.id))
+                                onPhotoUpdated(
+                                    photo.copy(
+                                        highlightVotes = r.highlightVotes ?: photo.highlightVotes,
+                                        isHighlight = r.isHighlight ?: photo.isHighlight
+                                    )
+                                )
+                            } catch (_: Exception) {}
+                        }
                     }
-                    val authorName = photo.user?.name ?: "Unknown"
-                    Text(authorName, color = Color.White.copy(0.7f), fontSize = 12.sp)
-                }
+                )
+                ActionPill(
+                    icon = Icons.Default.AddReaction,
+                    label = "${photo.reactions?.sumOf { it.count } ?: 0}",
+                    tint = Color.White,
+                    onClick = { showReactionPicker = true }
+                )
+                ActionPill(
+                    icon = Icons.Default.ChatBubbleOutline,
+                    label = "${photo.commentCount ?: 0}",
+                    tint = Color.White,
+                    onClick = { showComments = true }
+                )
             }
 
-            // Deleting overlay
+            // Bottom info: caption, reactions strip, author
+            Column(
+                modifier = Modifier.align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(0.7f))
+                        )
+                    )
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                photo.reactions?.takeIf { it.isNotEmpty() }?.let { rxs ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        rxs.forEach { rx ->
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = if (rx.mine) Coral.copy(0.6f) else Color.Black.copy(0.4f)
+                            ) {
+                                Text(
+                                    "${rx.emoji} ${rx.count}",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                if (!photo.caption.isNullOrEmpty()) {
+                    Text(photo.caption, color = Color.White, fontSize = 15.sp)
+                }
+                val authorName = photo.user?.name ?: "Unknown"
+                Text(authorName, color = Color.White.copy(0.7f), fontSize = 12.sp)
+            }
+
             if (isDeleting) {
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(0.5f)), Alignment.Center) {
                     CircularProgressIndicator(color = Color.White)
                 }
             }
         }
+    }
+
+    if (showReactionPicker) {
+        ReactionPickerSheet(
+            current = photo.reactions ?: emptyList(),
+            onPick = { emoji ->
+                showReactionPicker = false
+                scope.launch {
+                    try {
+                        val res = ApiClient.apiService.togglePhotoReaction(
+                            mapOf("photoId" to photo.id, "emoji" to emoji)
+                        )
+                        val current = (photo.reactions ?: emptyList()).toMutableList()
+                        val idx = current.indexOfFirst { it.emoji == emoji }
+                        when (res.toggled) {
+                            "added" -> {
+                                if (idx >= 0) {
+                                    current[idx] = current[idx].copy(count = current[idx].count + 1, mine = true)
+                                } else {
+                                    current += ReactionSummary(emoji, 1, true)
+                                }
+                            }
+                            "removed" -> {
+                                if (idx >= 0) {
+                                    val updated = current[idx].copy(count = (current[idx].count - 1).coerceAtLeast(0), mine = false)
+                                    if (updated.count == 0) current.removeAt(idx) else current[idx] = updated
+                                }
+                            }
+                        }
+                        onPhotoUpdated(photo.copy(reactions = current.toList()))
+                    } catch (_: Exception) {}
+                }
+            },
+            onDismiss = { showReactionPicker = false }
+        )
+    }
+
+    if (showComments) {
+        CommentsSheet(
+            photoId = photo.id,
+            currentUser = currentUser,
+            onDismiss = { showComments = false },
+            onCommentChange = { newCount ->
+                onPhotoUpdated(photo.copy(commentCount = newCount))
+            }
+        )
     }
 
     if (showDeleteConfirm) {
@@ -382,5 +492,225 @@ private fun PhotoDetailDialog(
                 OutlinedButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
             }
         )
+    }
+}
+
+// ── Action pill (fullscreen overlay) ───────────────────────────────────────────
+
+@Composable
+private fun ActionPill(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.4f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+        }
+        Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+// ── Reaction picker sheet ──────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReactionPickerSheet(
+    current: List<ReactionSummary>,
+    onPick: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val emojis = listOf("👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "✨")
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Chalk50) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text("React", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Chalk900)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                emojis.forEach { emoji ->
+                    val mine = current.any { it.emoji == emoji && it.mine }
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(if (mine) Coral.copy(alpha = 0.15f) else Chalk100)
+                            .clickable { onPick(emoji) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(emoji, fontSize = 22.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Comments sheet ─────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CommentsSheet(
+    photoId: String,
+    currentUser: User?,
+    onDismiss: () -> Unit,
+    onCommentChange: (Int) -> Unit
+) {
+    var comments by remember { mutableStateOf<List<PhotoComment>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var input by remember { mutableStateOf("") }
+    var sending by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(photoId) {
+        scope.launch {
+            loading = true
+            try { comments = ApiClient.apiService.getPhotoComments(photoId).comments }
+            catch (_: Exception) {}
+            loading = false
+        }
+    }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Chalk50) {
+        Column(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp, max = 560.dp)
+                .padding(horizontal = 20.dp).padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Comments", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Chalk900)
+
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                when {
+                    loading -> LoadingView()
+                    comments.isEmpty() -> Text(
+                        "No comments yet. Be the first.",
+                        color = Chalk500,
+                        fontSize = 13.sp,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                    else -> LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(comments, key = { it.id }) { c ->
+                            CommentRow(
+                                comment = c,
+                                canDelete = c.userId == currentUser?.id,
+                                onDelete = {
+                                    scope.launch {
+                                        try {
+                                            ApiClient.apiService.deletePhotoComment(mapOf("commentId" to c.id))
+                                            comments = comments.filter { it.id != c.id }
+                                            onCommentChange(comments.size)
+                                        } catch (_: Exception) {}
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = { input = it },
+                    placeholder = { Text("Add a comment…") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(24.dp),
+                    maxLines = 3,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Coral,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
+                )
+                val canSend = input.trim().isNotEmpty() && !sending
+                FilledIconButton(
+                    onClick = {
+                        val text = input.trim()
+                        if (text.isEmpty()) return@FilledIconButton
+                        sending = true
+                        scope.launch {
+                            try {
+                                val created = ApiClient.apiService.addPhotoComment(
+                                    mapOf("photoId" to photoId, "text" to text)
+                                )
+                                comments = comments + created
+                                input = ""
+                                onCommentChange(comments.size)
+                            } catch (_: Exception) {}
+                            sending = false
+                        }
+                    },
+                    enabled = canSend,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Coral,
+                        disabledContainerColor = Chalk100
+                    )
+                ) {
+                    Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommentRow(
+    comment: PhotoComment,
+    canDelete: Boolean,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(Coral.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                comment.user?.name?.firstOrNull()?.uppercase() ?: "?",
+                color = Coral,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                comment.user?.name ?: "Unknown",
+                color = Chalk900,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(comment.text, color = Chalk700, fontSize = 13.sp)
+        }
+        if (canDelete) {
+            IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Default.Close, contentDescription = "Delete", tint = Chalk400, modifier = Modifier.size(16.dp))
+            }
+        }
     }
 }

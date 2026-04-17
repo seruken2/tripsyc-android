@@ -18,6 +18,8 @@ app/release/
 *.jar
 *.war
 *.aar
+# …but do track the gradle wrapper jar.
+!gradle/wrapper/gradle-wrapper.jar
 
 # Gradle wrapper (keep gradlew but not cache)
 .gradle/
@@ -32,6 +34,7 @@ out/
 # Keystore files
 *.jks
 *.keystore
+keystore.properties
 
 # Google Services (contains API keys)
 google-services.json

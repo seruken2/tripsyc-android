@@ -287,7 +287,6 @@ fun ChatScreen(
             }
         }
     }
-}
 
     // Emoji reaction picker
     reactionTargetMessage?.let { targetMsg ->

@@ -22,8 +22,26 @@ import com.tripsyc.app.data.api.ApiClient
 import com.tripsyc.app.data.api.models.*
 import com.tripsyc.app.ui.common.EmptyState
 import com.tripsyc.app.ui.common.LoadingView
+import com.tripsyc.app.ui.common.WeatherWidget
 import com.tripsyc.app.ui.theme.*
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+
+private fun parseTripDateRange(locked: String): Pair<Date, Date>? {
+    val parts = locked.split(" to ")
+    if (parts.size != 2) return null
+    val fmts = listOf("MMM d, yyyy", "yyyy-MM-dd", "MMMM d, yyyy", "d MMM yyyy")
+    var s: Date? = null; var e: Date? = null
+    for (fmt in fmts) {
+        val df = SimpleDateFormat(fmt, Locale.US).apply { isLenient = false }
+        if (s == null) { s = runCatching { df.parse(parts[0].trim()) }.getOrNull() }
+        if (e == null) { e = runCatching { df.parse(parts[1].trim()) }.getOrNull() }
+    }
+    val start = s ?: return null
+    val end = e ?: return null
+    return start to end
+}
 
 @Composable
 fun GlobalOverviewScreen(
@@ -32,14 +50,50 @@ fun GlobalOverviewScreen(
     var data by remember { mutableStateOf<OverviewData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var weather by remember { mutableStateOf<WeatherResponse?>(null) }
+    var weatherCity by remember { mutableStateOf<String?>(null) }
+    var weatherDaysUntil by remember { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
+
+    suspend fun loadWeather(overview: OverviewData) {
+        val now = Date()
+        data class Cand(val start: Date, val city: String, val country: String)
+        val candidates = overview.tripCosts.mapNotNull { trip ->
+            val locked = trip.lockedDestination ?: return@mapNotNull null
+            val dates = trip.lockedDates ?: return@mapNotNull null
+            val range = parseTripDateRange(dates) ?: return@mapNotNull null
+            if (range.second.before(now)) return@mapNotNull null
+            val parts = locked.split(", ")
+            if (parts.size < 2) return@mapNotNull null
+            val country = parts.last().trim()
+            val city = parts.dropLast(1).joinToString(", ").trim()
+            if (city.isEmpty() || country.isEmpty()) return@mapNotNull null
+            Cand(range.first, city, country)
+        }.sortedBy { it.start }
+
+        val next = candidates.firstOrNull()
+        if (next == null) {
+            weather = null; weatherCity = null; weatherDaysUntil = null
+            return
+        }
+        val days = ((next.start.time - now.time) / (1000L * 60 * 60 * 24)).toInt().coerceAtLeast(0)
+        try {
+            weather = ApiClient.apiService.getWeather(city = next.city, country = next.country)
+            weatherCity = next.city
+            weatherDaysUntil = days
+        } catch (_: Exception) {
+            // weather is non-critical, fail silently
+        }
+    }
 
     fun load() {
         scope.launch {
             isLoading = true
             error = null
             try {
-                data = ApiClient.apiService.getOverview()
+                val overview = ApiClient.apiService.getOverview()
+                data = overview
+                loadWeather(overview)
             } catch (e: Exception) {
                 error = e.message ?: "Failed to load overview"
             }
@@ -83,6 +137,9 @@ fun GlobalOverviewScreen(
             } else {
                 OverviewContent(
                     data = overviewData,
+                    weather = weather,
+                    weatherCity = weatherCity,
+                    weatherDaysUntil = weatherDaysUntil,
                     modifier = modifier
                 )
             }
@@ -93,6 +150,9 @@ fun GlobalOverviewScreen(
 @Composable
 private fun OverviewContent(
     data: OverviewData,
+    weather: WeatherResponse? = null,
+    weatherCity: String? = null,
+    weatherDaysUntil: Int? = null,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -144,6 +204,13 @@ private fun OverviewContent(
                     color = Success,
                     modifier = Modifier.weight(1f)
                 )
+            }
+        }
+
+        // Weather for next confirmed trip
+        if (weather != null && weatherCity != null) {
+            item {
+                WeatherWidget(weather = weather, city = weatherCity, daysUntil = weatherDaysUntil)
             }
         }
 
