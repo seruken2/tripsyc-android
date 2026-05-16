@@ -184,6 +184,17 @@ data class AcceptMajorityResponse(
     val draftId: String? = null
 )
 
+data class TripSummaryResponse(
+    val headline: String,
+    val narrative: String,
+    val highlights: List<String> = emptyList()
+)
+
+data class CloneTripResponse(
+    val trip: Trip,
+    val reInvited: Int = 0
+)
+
 // ─── DestinationEnvironment ─────────────────────────────────────────────────
 //
 // Any field may be null when the upstream Google API call fails or the

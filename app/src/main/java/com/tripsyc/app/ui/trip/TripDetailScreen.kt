@@ -376,7 +376,7 @@ fun MoreTabScreen(
                     members = trip.members ?: emptyList()
                 )
                 MoreTab.Activity -> ActivityScreen(tripId = trip.id)
-                MoreTab.Memories -> MemoriesScreen(tripId = trip.id)
+                MoreTab.Memories -> MemoriesScreen(tripId = trip.id, tripName = trip.name)
                 MoreTab.Invite -> InviteScreen(trip = trip)
                 MoreTab.Settings -> TripSettingsScreen(
                     trip = trip,

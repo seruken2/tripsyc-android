@@ -80,6 +80,17 @@ interface ApiService {
         @Body body: Map<String, String>
     ): AcceptMajorityResponse
 
+    @POST("api/ai/trip-summary")
+    suspend fun generateTripSummary(
+        @Body body: Map<String, String>
+    ): TripSummaryResponse
+
+    @POST("api/trips/{id}/clone")
+    suspend fun cloneTrip(
+        @Path("id") sourceTripId: String,
+        @Body body: Map<String, Any?>
+    ): CloneTripResponse
+
     // ─── Members ──────────────────────────────────────────────────────────────
 
     @GET("api/trip-members/{tripId}")
