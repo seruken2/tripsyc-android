@@ -134,6 +134,12 @@ interface ApiService {
     @GET("api/rewind")
     suspend fun getRewind(@Query("year") year: Int? = null): RewindResponse
 
+    @GET("api/holidays")
+    suspend fun getHolidays(
+        @Query("country") country: String,
+        @Query("year") year: Int
+    ): HolidaysResponse
+
     // ─── Snaps ─────────────────────────────────────────────────────────────
 
     @GET("api/trips/{id}/snaps")

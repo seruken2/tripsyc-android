@@ -314,6 +314,18 @@ data class SnapReactionToggleResponse(
     val active: Boolean = false
 )
 
+// ─── Holidays ────────────────────────────────────────────────────────────────
+
+data class Holiday(
+    val date: String,
+    val name: String,
+    val country: String
+)
+
+data class HolidaysResponse(
+    val holidays: List<Holiday> = emptyList()
+)
+
 data class RewindResponse(
     val year: Int,
     val displayName: String,

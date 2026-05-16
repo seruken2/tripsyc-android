@@ -11,6 +11,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,10 +44,27 @@ fun DatesScreen(
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
+    var holidayCountry by remember { mutableStateOf<String?>(null) }
+    var holidays by remember { mutableStateOf<List<com.tripsyc.app.data.api.models.Holiday>>(emptyList()) }
+    var showCountryPicker by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var toastMessage by remember { mutableStateOf<String?>(null) }
 
     val isLocked = existingLock?.locked == true
+
+    suspend fun loadHolidays(country: String, year: Int) {
+        try {
+            holidays = ApiClient.apiService.getHolidays(country, year).holidays
+        } catch (_: Exception) {
+            holidays = emptyList()
+        }
+    }
+
+    LaunchedEffect(holidayCountry, currentMonth.year) {
+        val country = holidayCountry
+        if (country != null) loadHolidays(country, currentMonth.year)
+        else holidays = emptyList()
+    }
 
     LaunchedEffect(tripId) {
         isLoading = true
@@ -92,6 +111,70 @@ fun DatesScreen(
                 }
                 if (isLocked) {
                     Icon(Icons.Default.Lock, contentDescription = null, tint = Gold)
+                }
+            }
+        }
+
+        // Holiday picker — pick a country to overlay public holidays
+        // on the calendar (long-weekend planning). Server hosts the
+        // ruleset so we don't ship 400KB of country data client-side.
+        item {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Gold.copy(alpha = 0.08f),
+                onClick = { showCountryPicker = true }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Flag,
+                        contentDescription = null,
+                        tint = Gold,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Long-weekend planner", color = Gold, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text(
+                            text = holidayCountry?.let {
+                                val count = holidays.count { h -> h.date.startsWith(currentMonth.toString()) }
+                                "$it · $count holiday${if (count == 1) "" else "s"} this month"
+                            } ?: "Pick a country to surface public holidays",
+                            color = Chalk500,
+                            fontSize = 11.sp
+                        )
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Chalk400)
+                }
+            }
+        }
+
+        // Surface the holidays falling in the visible month.
+        val visibleHolidays = holidays.filter { it.date.startsWith(currentMonth.toString()) }
+        if (visibleHolidays.isNotEmpty()) {
+            item {
+                Surface(shape = RoundedCornerShape(12.dp), color = CardBackground, shadowElevation = 1.dp) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        visibleHolidays.forEach { h ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    h.date.takeLast(5),
+                                    color = Gold,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(h.name, color = Chalk900, fontSize = 13.sp)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -291,7 +374,86 @@ fun DatesScreen(
             }
         }
     }
+
+    if (showCountryPicker) {
+        AlertDialog(
+            onDismissRequest = { showCountryPicker = false },
+            title = { Text("Pick a country") },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 360.dp)
+                ) {
+                    items(SUPPORTED_HOLIDAY_COUNTRIES) { (code, name) ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color.Transparent,
+                            onClick = {
+                                holidayCountry = code
+                                showCountryPicker = false
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    if (code == holidayCountry) "✓ $name" else name,
+                                    color = if (code == holidayCountry) Coral else Chalk900,
+                                    fontWeight = if (code == holidayCountry) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    holidayCountry = null
+                    showCountryPicker = false
+                }) {
+                    Text("Clear", color = Chalk500)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showCountryPicker = false }) { Text("Close") }
+            }
+        )
+    }
 }
+
+// Short list of common holiday-supported countries. The server side
+// handles ~202 countries but we hand-curate the top-tappable ones so
+// the picker isn't a wall of obscure codes.
+private val SUPPORTED_HOLIDAY_COUNTRIES = listOf(
+    "US" to "United States",
+    "GB" to "United Kingdom",
+    "CA" to "Canada",
+    "AU" to "Australia",
+    "NZ" to "New Zealand",
+    "DE" to "Germany",
+    "FR" to "France",
+    "ES" to "Spain",
+    "IT" to "Italy",
+    "PT" to "Portugal",
+    "NL" to "Netherlands",
+    "IE" to "Ireland",
+    "JP" to "Japan",
+    "KR" to "South Korea",
+    "CN" to "China",
+    "HK" to "Hong Kong",
+    "TH" to "Thailand",
+    "VN" to "Vietnam",
+    "PH" to "Philippines",
+    "SG" to "Singapore",
+    "IN" to "India",
+    "AE" to "UAE",
+    "ZA" to "South Africa",
+    "EG" to "Egypt",
+    "BR" to "Brazil",
+    "MX" to "Mexico",
+    "AR" to "Argentina",
+    "CO" to "Colombia"
+)
 
 @Composable
 private fun LegendItem(color: Color, label: String) {
