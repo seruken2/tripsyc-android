@@ -195,6 +195,10 @@ data class CloneTripResponse(
     val reInvited: Int = 0
 )
 
+data class PackingListSuggestionsResponse(
+    val items: List<String> = emptyList()
+)
+
 // ─── DestinationEnvironment ─────────────────────────────────────────────────
 //
 // Any field may be null when the upstream Google API call fails or the

@@ -91,6 +91,11 @@ interface ApiService {
         @Body body: Map<String, Any?>
     ): CloneTripResponse
 
+    @POST("api/ai/packing-list")
+    suspend fun generatePackingSuggestions(
+        @Body body: Map<String, String>
+    ): PackingListSuggestionsResponse
+
     // ─── Members ──────────────────────────────────────────────────────────────
 
     @GET("api/trip-members/{tripId}")
