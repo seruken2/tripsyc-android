@@ -300,6 +300,18 @@ fun TripsListScreen(
                         }
                     }
 
+                    // Upcoming-trip countdown hero. Only renders when at
+                    // least one trip has DATE-locked dates in the future;
+                    // self-suppresses otherwise so the slot stays clean.
+                    if (state.searchQuery.isEmpty()) {
+                        item {
+                            UpcomingTripHero(
+                                trips = state.filteredTrips,
+                                onTap = { selectedTrip = it }
+                            )
+                        }
+                    }
+
                     // Pending invites section
                     if (state.pendingInvites.isNotEmpty() && state.searchQuery.isEmpty()) {
                         item {
