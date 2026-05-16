@@ -53,7 +53,7 @@ enum class TripTab(val label: String, val icon: ImageVector) {
 enum class MoreTab {
     Expenses, Notes, Packing, Photos, Itinerary, Polls,
     Responsibilities, Activity, Memories, Invite, Settings, Unlock,
-    Summary, GroupProfile, Guide
+    Summary, GroupProfile, Guide, SmartItinerary
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -230,6 +230,7 @@ fun MoreMenuScreen(
         Triple(MoreTab.Notes, Icons.Default.Note, "Notes"),
         Triple(MoreTab.Packing, Icons.Default.Luggage, "Packing"),
         Triple(MoreTab.Itinerary, Icons.Default.ListAlt, "Itinerary"),
+        Triple(MoreTab.SmartItinerary, Icons.Default.AutoAwesome, "Smart Plan"),
         Triple(MoreTab.Guide, Icons.Default.Book, "Trip Guide"),
         Triple(MoreTab.Expenses, Icons.Default.AccountBalance, "Expenses"),
         Triple(MoreTab.Photos, Icons.Default.PhotoLibrary, "Photos"),
@@ -338,6 +339,7 @@ fun MoreTabScreen(
                             MoreTab.Summary -> "Trip Summary"
                             MoreTab.GroupProfile -> "Group Profile"
                             MoreTab.Guide -> "Trip Guide"
+                            MoreTab.SmartItinerary -> "Smart Itinerary"
                         },
                         fontWeight = FontWeight.Bold,
                         color = Chalk900
@@ -384,6 +386,16 @@ fun MoreTabScreen(
                 MoreTab.Summary -> TripSummaryScreen(trip = trip)
                 MoreTab.GroupProfile -> GroupProfileScreen(tripId = trip.id)
                 MoreTab.Guide -> TripGuideScreen(tripId = trip.id)
+                MoreTab.SmartItinerary -> {
+                    val isOrganizer = trip.members?.firstOrNull { it.userId == currentUser?.id }
+                        ?.role?.let { it.name == "CREATOR" || it.name == "CO_ORGANIZER" } == true
+                    com.tripsyc.app.ui.trip.smart.SmartItineraryScreen(
+                        tripId = trip.id,
+                        currentUser = currentUser,
+                        isOrganizer = isOrganizer,
+                        onBack = onBack
+                    )
+                }
                 MoreTab.Unlock -> {
                     val dateLock = trip.locks?.firstOrNull { it.lockType == LockType.DATE }
                     val destLock = trip.locks?.firstOrNull { it.lockType == LockType.DESTINATION }

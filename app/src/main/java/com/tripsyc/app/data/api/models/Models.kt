@@ -126,6 +126,64 @@ data class PastCoTravelersResponse(
     val coTravelers: List<PastCoTraveler>
 )
 
+// ─── Smart Itinerary (AI) ────────────────────────────────────────────────────
+
+enum class AIItineraryCategory { RESTAURANT, ACTIVITY, TRANSPORT, INFO }
+
+data class AIItineraryVoteTallies(
+    val up: List<String> = emptyList(),
+    val down: List<String> = emptyList(),
+    val mine: String? = null
+)
+
+data class AIItineraryDraftItem(
+    val id: String,
+    val dayOffset: Int,
+    val date: String,
+    val category: AIItineraryCategory,
+    val title: String,
+    val description: String,
+    val location: String? = null,
+    val startTime: String? = null,
+    val endTime: String? = null,
+    val costUsd: Int? = null,
+    val acceptedItemId: String? = null,
+    val rejectedAt: String? = null,
+    val votes: AIItineraryVoteTallies = AIItineraryVoteTallies()
+) {
+    val isAccepted: Boolean get() = acceptedItemId != null
+    val isRejected: Boolean get() = rejectedAt != null
+    val isLive: Boolean get() = !isAccepted && !isRejected
+}
+
+data class AIItineraryDraft(
+    val id: String,
+    val createdAt: String,
+    val tone: String? = null,
+    val items: List<AIItineraryDraftItem> = emptyList()
+)
+
+data class AIItineraryDraftsResponse(
+    val drafts: List<AIItineraryDraft> = emptyList(),
+    val memberCount: Int = 0
+)
+
+data class AIItineraryGenerateResponse(
+    val draftId: String,
+    val tripName: String,
+    val destination: String,
+    val startDate: String,
+    val endDate: String,
+    val days: Int,
+    val memberCount: Int,
+    val items: List<AIItineraryDraftItem> = emptyList()
+)
+
+data class AcceptMajorityResponse(
+    val accepted: Int = 0,
+    val draftId: String? = null
+)
+
 // ─── DestinationEnvironment ─────────────────────────────────────────────────
 //
 // Any field may be null when the upstream Google API call fails or the

@@ -53,6 +53,33 @@ interface ApiService {
         @Path("id") destinationId: String
     ): DestinationEnvironment
 
+    // ─── Smart Itinerary (AI) ─────────────────────────────────────────────────
+
+    @GET("api/ai/itinerary-draft")
+    suspend fun getSmartItineraryDrafts(
+        @Query("tripId") tripId: String
+    ): AIItineraryDraftsResponse
+
+    @POST("api/ai/itinerary-draft")
+    suspend fun generateSmartItinerary(
+        @Body body: Map<String, String?>
+    ): AIItineraryGenerateResponse
+
+    @POST("api/ai/itinerary-draft/vote")
+    suspend fun voteOnSmartItem(
+        @Body body: Map<String, String>
+    ): Response<Unit>
+
+    @POST("api/ai/itinerary-draft/item/{id}/accept")
+    suspend fun acceptSmartItem(
+        @Path("id") itemId: String
+    ): Response<Map<String, Any?>>
+
+    @POST("api/ai/itinerary-draft/accept-majority")
+    suspend fun acceptMajoritySmartItems(
+        @Body body: Map<String, String>
+    ): AcceptMajorityResponse
+
     // ─── Members ──────────────────────────────────────────────────────────────
 
     @GET("api/trip-members/{tripId}")
