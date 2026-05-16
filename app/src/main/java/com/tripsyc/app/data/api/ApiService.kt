@@ -102,6 +102,35 @@ interface ApiService {
         @Query("to") to: String
     ): ExchangeRatesResponse
 
+    // ─── Crews ─────────────────────────────────────────────────────────────
+
+    @GET("api/crews")
+    suspend fun getCrews(): List<Crew>
+
+    @POST("api/crews")
+    suspend fun createCrew(@Body body: Map<String, Any?>): Crew
+
+    @PATCH("api/crews/{id}")
+    suspend fun renameCrew(
+        @Path("id") id: String,
+        @Body body: Map<String, String>
+    ): Crew
+
+    @DELETE("api/crews/{id}")
+    suspend fun deleteCrew(@Path("id") id: String): Response<Unit>
+
+    @POST("api/crews/{id}/members")
+    suspend fun addCrewMember(
+        @Path("id") crewId: String,
+        @Body body: Map<String, String?>
+    ): CrewMember
+
+    @DELETE("api/crews/{id}/members")
+    suspend fun removeCrewMember(
+        @Path("id") crewId: String,
+        @Query("memberId") memberId: String
+    ): Response<Unit>
+
     // ─── Members ──────────────────────────────────────────────────────────────
 
     @GET("api/trip-members/{tripId}")

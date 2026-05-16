@@ -15,8 +15,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -56,6 +59,7 @@ fun ProfileScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var isUploadingAvatar by remember { mutableStateOf(false) }
     var avatarError by remember { mutableStateOf<String?>(null) }
+    var showCrews by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val avatarPicker = rememberLauncherForActivityResult(
@@ -100,6 +104,28 @@ fun ProfileScreen(
 
     if (isLoading) {
         LoadingView("Loading profile...")
+        return
+    }
+
+    if (showCrews) {
+        Box(modifier = modifier.fillMaxSize()) {
+            com.tripsyc.app.ui.crews.CrewsScreen()
+            // Top-back affordance
+            FloatingActionButton(
+                onClick = { showCrews = false },
+                modifier = Modifier
+                    .padding(16.dp)
+                    .size(40.dp),
+                containerColor = Color.White,
+                contentColor = Chalk900
+            ) {
+                Icon(
+                    androidx.compose.material.icons.Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
         return
     }
 
@@ -308,6 +334,41 @@ fun ProfileScreen(
                         else Text("Save Changes", fontWeight = FontWeight.SemiBold)
                     }
                 }
+            }
+        }
+
+        // Crews entry — saved travel groups for one-tap bulk invites
+        // on new trips. Mirrors the iOS CrewsView.
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = CardBackground,
+            shadowElevation = 1.dp,
+            onClick = { showCrews = true }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    androidx.compose.material.icons.Icons.Default.Group,
+                    contentDescription = null,
+                    tint = Coral,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Crews", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 14.sp)
+                    Text(
+                        "Saved travel groups for one-tap invites",
+                        fontSize = 12.sp,
+                        color = Chalk500
+                    )
+                }
+                Icon(
+                    androidx.compose.material.icons.Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Chalk400
+                )
             }
         }
 

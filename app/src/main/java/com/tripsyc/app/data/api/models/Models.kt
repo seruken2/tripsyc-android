@@ -204,6 +204,31 @@ data class ExchangeRatesResponse(
     val rates: Map<String, Double> = emptyMap()
 )
 
+// ─── Crews (saved co-traveler groups) ───────────────────────────────────────
+
+data class CrewMember(
+    val id: String,
+    val crewId: String,
+    val userId: String? = null,
+    val name: String,
+    val email: String? = null,
+    val phone: String? = null,
+    val addedAt: String? = null
+)
+
+data class Crew(
+    val id: String,
+    val name: String,
+    val createdBy: String,
+    val createdAt: String? = null,
+    val members: List<CrewMember>? = null,
+    @SerializedName("_count") val count: CrewCount? = null
+)
+
+data class CrewCount(
+    val trips: Int? = null
+)
+
 // ─── DestinationEnvironment ─────────────────────────────────────────────────
 //
 // Any field may be null when the upstream Google API call fails or the
