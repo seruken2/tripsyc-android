@@ -103,6 +103,14 @@ fun ProfileScreen(
     var isSaving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
+    // Extended profile fields (Tier-1 set surfaced from iOS Edit Profile).
+    var editInterests by remember(profile) { mutableStateOf(profile?.interests?.joinToString(", ") ?: "") }
+    var editDietary by remember(profile) { mutableStateOf(profile?.dietary?.joinToString(", ") ?: "") }
+    var editEmergencyName by remember(profile) { mutableStateOf(profile?.emergencyName ?: "") }
+    var editEmergencyPhone by remember(profile) { mutableStateOf(profile?.emergencyPhone ?: "") }
+    var editCountriesVisited by remember(profile) { mutableStateOf(profile?.countriesVisited?.joinToString(", ") ?: "") }
+    var showExtended by remember { mutableStateOf(false) }
+
     if (isLoading) {
         LoadingView("Loading profile...")
         return
@@ -306,6 +314,95 @@ fun ProfileScreen(
                         }
                     }
 
+                    // "More about you" — collapsible block of Tier-1
+                    // extended fields. Kept hidden by default so the
+                    // main edit form stays scannable for users who
+                    // only want to tweak name / city / bio.
+                    TextButton(
+                        onClick = { showExtended = !showExtended },
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            if (showExtended) "Hide more details ▲" else "More about you ▼",
+                            color = Coral,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    if (showExtended) {
+                        OutlinedTextField(
+                            value = editInterests,
+                            onValueChange = { editInterests = it },
+                            label = { Text("Interests (comma-separated)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Coral,
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            )
+                        )
+                        OutlinedTextField(
+                            value = editDietary,
+                            onValueChange = { editDietary = it },
+                            label = { Text("Dietary (comma-separated)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Coral,
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            )
+                        )
+                        OutlinedTextField(
+                            value = editCountriesVisited,
+                            onValueChange = { editCountriesVisited = it },
+                            label = { Text("Countries visited (comma-separated)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Coral,
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            )
+                        )
+                        Text(
+                            "Emergency contact",
+                            color = Chalk500,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = editEmergencyName,
+                                onValueChange = { editEmergencyName = it },
+                                label = { Text("Name") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Coral,
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White
+                                )
+                            )
+                            OutlinedTextField(
+                                value = editEmergencyPhone,
+                                onValueChange = { editEmergencyPhone = it },
+                                label = { Text("Phone") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Coral,
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White
+                                )
+                            )
+                        }
+                    }
+
                     if (error != null) Text(error!!, color = Danger, fontSize = 13.sp)
 
                     Button(
@@ -319,7 +416,12 @@ fun ProfileScreen(
                                             "name" to editName.trim().ifEmpty { null },
                                             "city" to editCity.trim().ifEmpty { null },
                                             "bio" to editBio.trim().ifEmpty { null },
-                                            "travelStyle" to editStyle?.name
+                                            "travelStyle" to editStyle?.name,
+                                            "interests" to editInterests.splitAndTrim(),
+                                            "dietary" to editDietary.splitAndTrim(),
+                                            "emergencyName" to editEmergencyName.trim().ifEmpty { null },
+                                            "emergencyPhone" to editEmergencyPhone.trim().ifEmpty { null },
+                                            "countriesVisited" to editCountriesVisited.splitAndTrim()
                                         )
                                     )
                                     profile = updated
@@ -495,3 +597,12 @@ private suspend fun encodeAvatar(context: Context, uri: Uri): String =
         tiny.compress(Bitmap.CompressFormat.JPEG, 20, out)
         "data:image/jpeg;base64,${Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)}"
     }
+
+/// Splits a comma-separated text field into a clean list — trims each
+/// entry, drops empties, returns null when the whole field is blank so
+/// the server can interpret it as "field cleared" rather than "field
+/// set to empty list".
+private fun String.splitAndTrim(): List<String>? {
+    val cleaned = split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    return if (cleaned.isEmpty()) null else cleaned
+}

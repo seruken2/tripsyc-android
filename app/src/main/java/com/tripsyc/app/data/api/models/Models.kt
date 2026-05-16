@@ -29,6 +29,13 @@ data class User(
     val bio: String? = null,
     val travelStyle: TravelStyle? = null,
     val currency: String? = null,
+    // Extended profile fields — small subset of the server User model
+    // surfaced through the Android edit form.
+    val interests: List<String>? = null,
+    val dietary: List<String>? = null,
+    val emergencyName: String? = null,
+    val emergencyPhone: String? = null,
+    val countriesVisited: List<String>? = null,
     val isAdmin: Boolean? = null,
     val createdAt: String? = null,
     val isImpersonating: Boolean? = null,
