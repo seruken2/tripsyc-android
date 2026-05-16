@@ -96,6 +96,12 @@ interface ApiService {
         @Body body: Map<String, String>
     ): PackingListSuggestionsResponse
 
+    @GET("api/exchange-rates")
+    suspend fun getExchangeRates(
+        @Query("from") from: String,
+        @Query("to") to: String
+    ): ExchangeRatesResponse
+
     // ─── Members ──────────────────────────────────────────────────────────────
 
     @GET("api/trip-members/{tripId}")

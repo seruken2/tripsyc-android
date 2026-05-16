@@ -32,7 +32,32 @@ fun ExpensesScreen(
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var showAddSheet by remember { mutableStateOf(false) }
+    // Live exchange rate from trip currency → viewer currency. Re-fetched
+    // when the trip currency or viewer's preferred currency changes.
+    var autoRate by remember { mutableStateOf<Double?>(null) }
     val scope = rememberCoroutineScope()
+    val viewerCurrency = currentUser?.currency ?: tripCurrency
+    val activeTripCurrency = response?.tripCurrency ?: tripCurrency
+    val showConversion = autoRate != null && viewerCurrency != activeTripCurrency
+
+    fun convertedAmount(amount: Double): String? {
+        val rate = autoRate ?: return null
+        return "≈ ${String.format("%.2f", amount * rate)} $viewerCurrency"
+    }
+
+    LaunchedEffect(activeTripCurrency, viewerCurrency) {
+        if (viewerCurrency.equals(activeTripCurrency, ignoreCase = true)) {
+            autoRate = null
+            return@LaunchedEffect
+        }
+        autoRate = try {
+            ApiClient.apiService
+                .getExchangeRates(from = activeTripCurrency, to = viewerCurrency)
+                .rates[viewerCurrency]
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     fun load() {
         scope.launch {
@@ -115,12 +140,19 @@ fun ExpensesScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(
-                                        text = "${response?.tripCurrency ?: tripCurrency} ${String.format("%.2f", balance.amount)}",
-                                        color = if (balance.from == currentUser?.id) Danger else Success,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 13.sp
-                                    )
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = "$activeTripCurrency ${String.format("%.2f", balance.amount)}",
+                                            color = if (balance.from == currentUser?.id) Danger else Success,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 13.sp
+                                        )
+                                        if (showConversion) {
+                                            convertedAmount(balance.amount)?.let {
+                                                Text(it, color = Chalk400, fontSize = 11.sp)
+                                            }
+                                        }
+                                    }
                                     // Show Settle all button if current user is involved in this balance
                                     if (balance.from == currentUser?.id || balance.to == currentUser?.id) {
                                         TextButton(
@@ -168,6 +200,7 @@ fun ExpensesScreen(
                     expense = expense,
                     currentUserId = currentUser?.id,
                     currency = response?.tripCurrency ?: tripCurrency,
+                    convertedAmount = if (showConversion) { amount -> convertedAmount(amount) } else null,
                     onDelete = {
                         scope.launch {
                             try {
@@ -207,7 +240,8 @@ private fun ExpenseCard(
     currentUserId: String?,
     currency: String,
     onDelete: () -> Unit,
-    onSettle: (String, Boolean) -> Unit
+    onSettle: (String, Boolean) -> Unit,
+    convertedAmount: ((Double) -> String?)? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -240,6 +274,9 @@ private fun ExpenseCard(
                         color = Chalk900,
                         fontSize = 16.sp
                     )
+                    convertedAmount?.invoke(expense.amount)?.let {
+                        Text(it, color = Chalk400, fontSize = 11.sp)
+                    }
                     TextButton(
                         onClick = { expanded = !expanded },
                         contentPadding = PaddingValues(0.dp)

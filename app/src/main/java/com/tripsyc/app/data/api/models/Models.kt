@@ -199,6 +199,11 @@ data class PackingListSuggestionsResponse(
     val items: List<String> = emptyList()
 )
 
+data class ExchangeRatesResponse(
+    val base: String,
+    val rates: Map<String, Double> = emptyMap()
+)
+
 // ─── DestinationEnvironment ─────────────────────────────────────────────────
 //
 // Any field may be null when the upstream Google API call fails or the
