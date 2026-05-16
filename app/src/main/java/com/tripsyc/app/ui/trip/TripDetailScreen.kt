@@ -184,7 +184,8 @@ fun TripDetailScreen(
                     currentUser = currentUser,
                     onTabSelected = { selectedTab = it },
                     isOrganizer = isOrganizer,
-                    onTripUpdated = { freshTrip = it }
+                    onTripUpdated = { freshTrip = it },
+                    onMemberChanged = { reloadTrip() }
                 )
                 TripTab.Dates -> DatesScreen(
                     tripId = freshTrip.id,

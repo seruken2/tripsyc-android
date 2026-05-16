@@ -35,6 +35,7 @@ import com.tripsyc.app.data.api.models.User
 import com.tripsyc.app.ui.common.ChalkDivider
 import com.tripsyc.app.ui.theme.*
 import com.tripsyc.app.ui.trip.TripTab
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,8 +51,15 @@ fun OverviewScreen(
     currentUser: User?,
     onTabSelected: (TripTab) -> Unit,
     isOrganizer: Boolean = false,
-    onTripUpdated: (Trip) -> Unit = {}
+    onTripUpdated: (Trip) -> Unit = {},
+    onMemberChanged: () -> Unit = {}
 ) {
+    val viewerMember = trip.members?.firstOrNull { it.userId == currentUser?.id }
+    val lockedDateValue = trip.locks
+        ?.firstOrNull { it.lockType == LockType.DATE && it.locked }
+        ?.lockedValue
+    val (lockedTripFrom, lockedTripUntil) = parseLockedDateRange(lockedDateValue)
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -258,6 +266,22 @@ fun OverviewScreen(
                     color = Danger,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        // ── RSVP header (only for actual trip members) ────────────────────
+        if (viewerMember != null) {
+            item {
+                RsvpHeaderCard(
+                    initialRsvp = viewerMember.rsvp,
+                    initialRsvpNote = viewerMember.rsvpNote,
+                    initialAttendFrom = viewerMember.attendFrom,
+                    initialAttendUntil = viewerMember.attendUntil,
+                    lockedTripFrom = lockedTripFrom,
+                    lockedTripUntil = lockedTripUntil,
+                    onRsvpChanged = { onMemberChanged() },
+                    onWindowChanged = { onMemberChanged() }
                 )
             }
         }
@@ -537,6 +561,18 @@ fun OverviewScreen(
             }
         }
     }
+}
+
+/// Parses the lock value "YYYY-MM-DD to YYYY-MM-DD" into two LocalDates.
+/// Returns (null, null) when the date isn't locked yet or the string is
+/// malformed. Used to seed/clamp the attend-window picker on the RSVP card.
+private fun parseLockedDateRange(value: String?): Pair<LocalDate?, LocalDate?> {
+    if (value.isNullOrBlank()) return null to null
+    val parts = value.split(" to ")
+    if (parts.size != 2) return null to null
+    val from = runCatching { LocalDate.parse(parts[0].trim()) }.getOrNull()
+    val until = runCatching { LocalDate.parse(parts[1].trim()) }.getOrNull()
+    return from to until
 }
 
 // Uploads the picked image to Azure Blob via SAS, falling back to a base64

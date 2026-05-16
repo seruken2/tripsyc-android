@@ -72,6 +72,11 @@ data class TripMember(
     val travelStyle: TravelStyle = TravelStyle.CHILL,
     val role: MemberRole = MemberRole.MEMBER,
     val rsvp: RsvpStatus? = null,
+    val rsvpNote: String? = null,
+    // ISO yyyy-MM-dd. Set when a member is only attending part of a
+    // locked-date trip; feeds expense-split window exclusion.
+    val attendFrom: String? = null,
+    val attendUntil: String? = null,
     val joinedAt: String? = null,
     val avatarUrl: String? = null,
     val email: String? = null,
