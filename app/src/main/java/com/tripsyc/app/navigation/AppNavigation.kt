@@ -14,15 +14,18 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.tripsyc.app.data.api.ApiClient
 import com.tripsyc.app.data.api.models.User
+import com.tripsyc.app.data.prefs.TripPrefsStore
 import com.tripsyc.app.ui.auth.AuthViewModel
 import com.tripsyc.app.ui.auth.LoginScreen
 import com.tripsyc.app.ui.auth.OtpScreen
 import com.tripsyc.app.ui.main.MainScreen
+import com.tripsyc.app.ui.onboarding.WelcomeScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.net.Uri
 
 sealed class Screen(val route: String) {
+    object Welcome : Screen("welcome")
     object Login : Screen("login")
     object Otp : Screen("otp/{email}") {
         fun createRoute(email: String) = "otp/$email"
@@ -67,7 +70,11 @@ fun AppNavigation(
                 Screen.Login.route
             }
         } else {
-            Screen.Login.route
+            // First-run users land on the four-page Welcome carousel
+            // before the login screen. Once they tap Get Started we
+            // mark the flag so they go straight to Login next time.
+            if (TripPrefsStore.welcomeSeen()) Screen.Login.route
+            else Screen.Welcome.route
         }
     }
 
@@ -103,6 +110,17 @@ fun AppNavigation(
     }
 
     NavHost(navController = navController, startDestination = startDestination!!) {
+        composable(Screen.Welcome.route) {
+            WelcomeScreen(
+                onGetStarted = {
+                    TripPrefsStore.markWelcomeSeen()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Screen.Login.route) {
             LoginScreen(
                 viewModel = authViewModel,

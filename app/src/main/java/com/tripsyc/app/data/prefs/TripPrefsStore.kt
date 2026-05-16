@@ -16,6 +16,7 @@ object TripPrefsStore {
     private const val FILE = "tripsyc.trip_prefs"
     private const val KEY_PINNED = "pinnedTrips"
     private const val KEY_ARCHIVED = "archivedTrips"
+    private const val KEY_WELCOME_SEEN = "welcomeSeen"
 
     private var prefs: SharedPreferences? = null
 
@@ -27,6 +28,12 @@ object TripPrefsStore {
     fun pinnedIds(): Set<String> = prefs?.getStringSet(KEY_PINNED, emptySet()).orEmpty()
 
     fun archivedIds(): Set<String> = prefs?.getStringSet(KEY_ARCHIVED, emptySet()).orEmpty()
+
+    fun welcomeSeen(): Boolean = prefs?.getBoolean(KEY_WELCOME_SEEN, false) == true
+
+    fun markWelcomeSeen() {
+        prefs?.edit()?.putBoolean(KEY_WELCOME_SEEN, true)?.apply()
+    }
 
     fun togglePinned(tripId: String): Set<String> {
         val updated = pinnedIds().toMutableSet().apply {
