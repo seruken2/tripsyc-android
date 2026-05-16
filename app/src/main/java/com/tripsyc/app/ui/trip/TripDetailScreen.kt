@@ -182,7 +182,9 @@ fun TripDetailScreen(
                 TripTab.Overview -> OverviewScreen(
                     trip = freshTrip,
                     currentUser = currentUser,
-                    onTabSelected = { selectedTab = it }
+                    onTabSelected = { selectedTab = it },
+                    isOrganizer = isOrganizer,
+                    onTripUpdated = { freshTrip = it }
                 )
                 TripTab.Dates -> DatesScreen(
                     tripId = freshTrip.id,

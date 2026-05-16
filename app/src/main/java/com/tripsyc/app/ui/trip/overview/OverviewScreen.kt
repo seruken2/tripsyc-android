@@ -1,5 +1,10 @@
 package com.tripsyc.app.ui.trip.overview
 
+import android.content.Context
+import android.net.Uri
+import android.util.Base64
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,7 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,23 +23,68 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.tripsyc.app.data.api.ApiClient
 import com.tripsyc.app.data.api.models.LockType
 import com.tripsyc.app.data.api.models.Trip
 import com.tripsyc.app.data.api.models.User
 import com.tripsyc.app.ui.common.ChalkDivider
 import com.tripsyc.app.ui.theme.*
 import com.tripsyc.app.ui.trip.TripTab
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun OverviewScreen(
     trip: Trip,
     currentUser: User?,
-    onTabSelected: (TripTab) -> Unit
+    onTabSelected: (TripTab) -> Unit,
+    isOrganizer: Boolean = false,
+    onTripUpdated: (Trip) -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Cover-photo edit state — kept local so the rest of the overview
+    // (members, locks, progress) can re-render without flashing the hero.
+    var pendingCoverUri by remember { mutableStateOf<Uri?>(null) }
+    var isUploadingCover by remember { mutableStateOf(false) }
+    var coverError by remember { mutableStateOf<String?>(null) }
+
+    val coverPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            pendingCoverUri = uri
+            coverError = null
+            scope.launch {
+                isUploadingCover = true
+                try {
+                    val url = uploadCoverPhoto(context, uri, trip.id)
+                    val updated = ApiClient.apiService.updateTrip(
+                        trip.id,
+                        mapOf("coverImage" to url)
+                    )
+                    onTripUpdated(updated)
+                } catch (e: Exception) {
+                    coverError = e.message ?: "Couldn't update cover"
+                    pendingCoverUri = null
+                }
+                isUploadingCover = false
+            }
+        }
+    }
+
     val dateLock = trip.locks?.firstOrNull { it.lockType == LockType.DATE }
     val destLock = trip.locks?.firstOrNull { it.lockType == LockType.DESTINATION }
     val isDateLocked = dateLock?.locked == true
@@ -60,30 +110,43 @@ fun OverviewScreen(
                     .fillMaxWidth()
                     .height(220.dp)
             ) {
-                if (!trip.coverImage.isNullOrEmpty() &&
-                    (trip.coverImage.startsWith("https://") || trip.coverImage.startsWith("http://"))
-                ) {
-                    AsyncImage(
-                        model = trip.coverImage,
-                        contentDescription = trip.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Brush.linearGradient(listOf(Coral, CoralLight))),
-                        contentAlignment = Alignment.Center
-                    ) {
+                // Optimistic preview wins while an upload is in flight so
+                // the user sees their new photo immediately rather than
+                // staring at the old cover.
+                when {
+                    pendingCoverUri != null -> {
+                        AsyncImage(
+                            model = pendingCoverUri,
+                            contentDescription = trip.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    !trip.coverImage.isNullOrEmpty() &&
+                        (trip.coverImage.startsWith("https://") || trip.coverImage.startsWith("http://")) -> {
+                        AsyncImage(
+                            model = trip.coverImage,
+                            contentDescription = trip.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    else -> {
                         Box(
                             modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(Color.White.copy(alpha = 0.3f)),
+                                .fillMaxSize()
+                                .background(Brush.linearGradient(listOf(Coral, CoralLight))),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("T", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(Color.White.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("T", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -118,6 +181,84 @@ fun OverviewScreen(
                         )
                     }
                 }
+
+                // Top-trailing "Change cover" pill — visible only to organizers.
+                // The Settings entry-point is buried under More → Settings, so
+                // a discoverable affordance on the hero matches what users
+                // expect after seeing similar buttons on Instagram / Airbnb.
+                if (isOrganizer) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 12.dp, end = 12.dp),
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.4f),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            Color.White.copy(alpha = 0.35f)
+                        ),
+                        onClick = {
+                            if (!isUploadingCover) {
+                                coverPicker.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            }
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PhotoCamera,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = if (!trip.coverImage.isNullOrEmpty()) "Change cover" else "Add cover",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+
+                // Uploading overlay — dim + spinner over the hero so the user
+                // always sees feedback for a tap they just made.
+                if (isUploadingCover) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
+                            Text(
+                                text = "Updating cover…",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+            if (coverError != null) {
+                Text(
+                    text = coverError!!,
+                    color = Danger,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
             }
         }
 
@@ -397,6 +538,34 @@ fun OverviewScreen(
         }
     }
 }
+
+// Uploads the picked image to Azure Blob via SAS, falling back to a base64
+// data URI if Azure is unreachable. Mirrors PhotosScreen.uploadPhoto so the
+// two entry points produce identical server-side results.
+private suspend fun uploadCoverPhoto(context: Context, uri: Uri, tripId: String): String =
+    withContext(Dispatchers.IO) {
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: throw Exception("Could not read image")
+
+        return@withContext try {
+            val uploadResponse = ApiClient.apiService.getUploadUrl(tripId)
+            val client = OkHttpClient.Builder()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(120, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .build()
+            val request = Request.Builder()
+                .url(uploadResponse.uploadUrl)
+                .put(bytes.toRequestBody("image/jpeg".toMediaType()))
+                .addHeader("x-ms-blob-type", "BlockBlob")
+                .build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) throw Exception("Azure upload failed: ${response.code}")
+            uploadResponse.blobUrl
+        } catch (_: Exception) {
+            "data:image/jpeg;base64,${Base64.encodeToString(bytes, Base64.NO_WRAP)}"
+        }
+    }
 
 @Composable
 private fun QuickActionCard(
