@@ -38,6 +38,8 @@ class TripFcmService : FirebaseMessagingService() {
         val title = message.notification?.title ?: message.data["title"] ?: return
         val body = message.notification?.body ?: message.data["body"] ?: return
         val tripId = message.data["tripId"]
+        val type = message.data["type"]?.lowercase()
+        val inviteId = message.data["inviteId"]
 
         // App is in foreground — route to the in-app banner instead of
         // posting a system notification, which would yank the user's
@@ -48,15 +50,27 @@ class TripFcmService : FirebaseMessagingService() {
             return
         }
 
-        showNotification(title, body, tripId)
+        showNotification(
+            title = title,
+            body = body,
+            tripId = tripId,
+            inviteId = inviteId.takeIf { type == "invite" }
+        )
     }
 
-    private fun showNotification(title: String, body: String, tripId: String?) {
+    private fun showNotification(
+        title: String,
+        body: String,
+        tripId: String?,
+        inviteId: String? = null
+    ) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // Create channel
         val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH)
         manager.createNotificationChannel(channel)
+
+        val notificationId = System.currentTimeMillis().toInt()
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -67,14 +81,42 @@ class TripFcmService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .build()
 
-        manager.notify(System.currentTimeMillis().toInt(), notification)
+        // Inline Accept / Decline buttons on invite notifications —
+        // matches the iOS notification category. Receiver fires the
+        // same respondToInvite API and dismisses the notification.
+        if (inviteId != null) {
+            val acceptIntent = Intent(this, InviteActionReceiver::class.java).apply {
+                action = InviteActionReceiver.ACTION_ACCEPT
+                putExtra(InviteActionReceiver.EXTRA_INVITE_ID, inviteId)
+                tripId?.let { putExtra(InviteActionReceiver.EXTRA_TRIP_ID, it) }
+                putExtra(InviteActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+            }
+            val declineIntent = Intent(this, InviteActionReceiver::class.java).apply {
+                action = InviteActionReceiver.ACTION_DECLINE
+                putExtra(InviteActionReceiver.EXTRA_INVITE_ID, inviteId)
+                tripId?.let { putExtra(InviteActionReceiver.EXTRA_TRIP_ID, it) }
+                putExtra(InviteActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+            }
+            val acceptPending = PendingIntent.getBroadcast(
+                this, notificationId * 2, acceptIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val declinePending = PendingIntent.getBroadcast(
+                this, notificationId * 2 + 1, declineIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder
+                .addAction(0, "Accept", acceptPending)
+                .addAction(0, "Decline", declinePending)
+        }
+
+        manager.notify(notificationId, builder.build())
     }
 }

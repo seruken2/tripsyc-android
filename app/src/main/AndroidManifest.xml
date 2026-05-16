@@ -55,6 +55,17 @@
             </intent-filter>
         </service>
 
+        <!-- Invite Accept / Decline broadcast receiver for notification
+             action buttons. -->
+        <receiver
+            android:name=".push.InviteActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.tripsyc.app.INVITE_ACCEPT" />
+                <action android:name="com.tripsyc.app.INVITE_DECLINE" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
