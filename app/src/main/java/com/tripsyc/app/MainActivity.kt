@@ -6,11 +6,16 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.tripsyc.app.data.prefs.TripPrefsStore
 import com.tripsyc.app.navigation.AppNavigation
+import com.tripsyc.app.push.InAppBanner
+import com.tripsyc.app.push.InAppBannerHost
 import com.tripsyc.app.ui.theme.Chalk50
 import com.tripsyc.app.ui.theme.TripsycTheme
 
@@ -19,6 +24,10 @@ class MainActivity : ComponentActivity() {
     // Deep link / notification extras passed to navigation
     private var pendingTripId: String? = null
     private var pendingDeepLink: String? = null
+    // Mutable state so the in-app-banner tap can push a trip id into
+    // the same channel a notification tap uses, without rebuilding the
+    // whole activity.
+    private val bannerTripId = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,13 +42,30 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Chalk50
                 ) {
-                    AppNavigation(
-                        pendingTripId = pendingTripId,
-                        pendingDeepLink = pendingDeepLink
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        AppNavigation(
+                            pendingTripId = bannerTripId.value ?: pendingTripId,
+                            pendingDeepLink = pendingDeepLink
+                        )
+                        Box(modifier = Modifier.align(Alignment.TopCenter)) {
+                            InAppBannerHost(
+                                onTapTrip = { id -> bannerTripId.value = id }
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        InAppBanner.setForeground(true)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        InAppBanner.setForeground(false)
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -39,6 +39,15 @@ class TripFcmService : FirebaseMessagingService() {
         val body = message.notification?.body ?: message.data["body"] ?: return
         val tripId = message.data["tripId"]
 
+        // App is in foreground — route to the in-app banner instead of
+        // posting a system notification, which would yank the user's
+        // attention away from whatever they're already doing. Matches
+        // iOS's willPresent suppression for the foreground case.
+        if (InAppBanner.isForeground()) {
+            InAppBanner.post(InAppBanner.Event(title = title, body = body, tripId = tripId))
+            return
+        }
+
         showNotification(title, body, tripId)
     }
 
