@@ -63,6 +63,7 @@ fun TripsListScreen(
     // screen. Cleared once the user picks a next step or dismisses.
     var celebrationTrip by remember { mutableStateOf<Trip?>(null) }
     var celebrationIsFirst by remember { mutableStateOf(false) }
+    var showSampleTrip by remember { mutableStateOf(false) }
 
     if (celebrationTrip != null) {
         com.tripsyc.app.ui.onboarding.TripCreatedScreen(
@@ -221,6 +222,19 @@ fun TripsListScreen(
                                 "Create Your First Trip",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                    item {
+                        TextButton(
+                            onClick = { showSampleTrip = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "See what a Tripsyc trip looks like",
+                                color = Coral,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 13.sp
                             )
                         }
                     }
@@ -423,6 +437,24 @@ fun TripsListScreen(
                 celebrationTrip = trip
             }
         )
+    }
+
+    if (showSampleTrip) {
+        // ModalBottomSheet isn't quite right here — the preview is
+        // long. Render as a full-bleed Dialog so it behaves like the
+        // iOS sheet that takes over the screen.
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showSampleTrip = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            com.tripsyc.app.ui.onboarding.SampleTripPreview(
+                onCreateOwn = {
+                    showSampleTrip = false
+                    showCreateSheet = true
+                },
+                onDismiss = { showSampleTrip = false }
+            )
+        }
     }
 
     if (showJoinSheet) {
