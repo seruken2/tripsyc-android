@@ -59,6 +59,36 @@ fun TripsListScreen(
     var searchExpanded by remember { mutableStateOf(false) }
     var sortOption by remember { mutableStateOf(TripSortOption.Newest) }
     var showSortMenu by remember { mutableStateOf(false) }
+    // The just-created trip + first-trip flag drive the celebration
+    // screen. Cleared once the user picks a next step or dismisses.
+    var celebrationTrip by remember { mutableStateOf<Trip?>(null) }
+    var celebrationIsFirst by remember { mutableStateOf(false) }
+
+    if (celebrationTrip != null) {
+        com.tripsyc.app.ui.onboarding.TripCreatedScreen(
+            trip = celebrationTrip!!,
+            isFirstTrip = celebrationIsFirst,
+            onInviteBuddies = {
+                val t = celebrationTrip!!
+                celebrationTrip = null
+                selectedTrip = t
+                // TODO: deep-link straight to Invite tab — for now the
+                // detail screen opens on Overview where Invite lives in
+                // the More grid.
+            },
+            onAddActivity = {
+                val t = celebrationTrip!!
+                celebrationTrip = null
+                selectedTrip = t
+            },
+            onDone = {
+                val t = celebrationTrip!!
+                celebrationTrip = null
+                selectedTrip = t
+            }
+        )
+        return
+    }
 
     if (selectedTrip != null) {
         com.tripsyc.app.ui.trip.TripDetailScreen(
@@ -380,12 +410,17 @@ fun TripsListScreen(
     }
 
     if (showCreateSheet) {
+        // "First trip" is keyed on whether the list was empty *before*
+        // we add the new row — checked against the current state count
+        // so a follow-on create after the celebration doesn't re-fire it.
+        val isFirst = state.trips.isEmpty()
         CreateTripSheet(
             onDismiss = { showCreateSheet = false },
             onCreated = { trip ->
                 showCreateSheet = false
                 viewModel.insertTrip(trip)
-                selectedTrip = trip
+                celebrationIsFirst = isFirst
+                celebrationTrip = trip
             }
         )
     }
