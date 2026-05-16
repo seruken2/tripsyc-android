@@ -12,7 +12,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -294,12 +299,65 @@ fun TripsListScreen(
                         }
                     }
 
-                    // Trip cards
-                    items(state.filteredTrips) { trip ->
-                        TripCard(
+                    // Trip cards — wrapped in a swipe-to-toggle row so
+                    // left-swipe pins/unpins (gold) and right-swipe
+                    // archives/unarchives (gray), matching the iOS list.
+                    items(state.filteredTrips, key = { it.id }) { trip ->
+                        SwipeableTripRow(
                             trip = trip,
-                            modifier = Modifier.clickable { selectedTrip = trip }
+                            isPinned = trip.id in state.pinnedIds,
+                            isArchived = trip.id in state.archivedIds,
+                            onTogglePin = { viewModel.togglePinned(trip.id) },
+                            onToggleArchive = { viewModel.toggleArchived(trip.id) },
+                            onClick = { selectedTrip = trip }
                         )
+                    }
+
+                    // Archived peek — if any trips are archived and the
+                    // toggle is off, surface a small footer so the user
+                    // doesn't lose track of them.
+                    if (!state.showArchived && state.archivedCount > 0) {
+                        item {
+                            TextButton(
+                                onClick = { viewModel.setShowArchived(true) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    Icons.Default.Archive,
+                                    contentDescription = null,
+                                    tint = Chalk500,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Show ${state.archivedCount} archived",
+                                    color = Chalk500,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    } else if (state.showArchived && state.archivedCount > 0) {
+                        item {
+                            TextButton(
+                                onClick = { viewModel.setShowArchived(false) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    Icons.Default.VisibilityOff,
+                                    contentDescription = null,
+                                    tint = Chalk500,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Hide archived",
+                                    color = Chalk500,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
                     }
 
                     // Join trip button
@@ -512,3 +570,118 @@ private fun PendingInviteCard(
         }
     }
 }
+
+/**
+ * SwipeToDismissBox wrapper that fires a toggle on either end-of-swipe
+ * and snaps back instead of dismissing the row. Backgrounds reveal the
+ * action: gold pin pill on left swipe, gray archive pill on right swipe.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeableTripRow(
+    trip: Trip,
+    isPinned: Boolean,
+    isArchived: Boolean,
+    onTogglePin: () -> Unit,
+    onToggleArchive: () -> Unit,
+    onClick: () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { target ->
+            when (target) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onTogglePin()
+                    false
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onToggleArchive()
+                    false
+                }
+                else -> false
+            }
+        },
+        positionalThreshold = { totalDistance -> totalDistance * 0.35f }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val (bg, icon, label, tint) = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> SwipeBg(
+                    bg = Gold.copy(alpha = 0.15f),
+                    icon = if (isPinned) Icons.Default.PushPin else Icons.Outlined.PushPin,
+                    label = if (isPinned) "Unpin" else "Pin",
+                    tint = Gold
+                )
+                SwipeToDismissBoxValue.EndToStart -> SwipeBg(
+                    bg = Chalk100,
+                    icon = if (isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
+                    label = if (isArchived) "Unarchive" else "Archive",
+                    tint = Chalk500
+                )
+                else -> SwipeBg(Color.Transparent, Icons.Default.Archive, "", Color.Transparent)
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(bg, RoundedCornerShape(14.dp))
+                    .padding(horizontal = 24.dp),
+                contentAlignment = when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                    else -> Alignment.Center
+                }
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+                    Text(label, color = tint, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        },
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true
+    ) {
+        Box(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
+            TripCard(
+                trip = trip,
+                modifier = Modifier
+            )
+            // Subtle pin badge anchored on top-end so pinned trips
+            // remain identifiable after the swipe animation snaps back.
+            if (isPinned) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 12.dp, end = 12.dp)
+                        .clip(CircleShape)
+                        .background(Gold.copy(alpha = 0.20f))
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.PushPin,
+                            contentDescription = null,
+                            tint = Gold,
+                            modifier = Modifier.size(10.dp)
+                        )
+                        Text("Pinned", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class SwipeBg(
+    val bg: Color,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val label: String,
+    val tint: Color
+)

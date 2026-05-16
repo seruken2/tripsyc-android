@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.tripsyc.app.data.api.ApiClient
 import com.tripsyc.app.data.api.models.PendingInvite
 import com.tripsyc.app.data.api.models.Trip
+import com.tripsyc.app.data.prefs.TripPrefsStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,23 +16,55 @@ data class TripsState(
     val pendingInvites: List<PendingInvite> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val searchQuery: String = ""
+    val searchQuery: String = "",
+    val pinnedIds: Set<String> = emptySet(),
+    val archivedIds: Set<String> = emptySet(),
+    val showArchived: Boolean = false
 ) {
+    /// Active visible list: search-filtered, then archived rows dropped
+    /// unless `showArchived` is on, then pinned ones floated to top.
     val filteredTrips: List<Trip>
-        get() = if (searchQuery.isBlank()) trips
-        else trips.filter {
-            it.name.contains(searchQuery, ignoreCase = true) ||
-            it.approxMonth?.contains(searchQuery, ignoreCase = true) == true
+        get() {
+            val searched = if (searchQuery.isBlank()) trips
+            else trips.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                it.approxMonth?.contains(searchQuery, ignoreCase = true) == true
+            }
+            val visible = if (showArchived) searched
+            else searched.filter { it.id !in archivedIds }
+            val (pinned, rest) = visible.partition { it.id in pinnedIds }
+            return pinned + rest
         }
+
+    val archivedCount: Int get() = trips.count { it.id in archivedIds }
 }
 
 class TripsViewModel : ViewModel() {
 
-    private val _state = MutableStateFlow(TripsState())
+    private val _state = MutableStateFlow(
+        TripsState(
+            pinnedIds = TripPrefsStore.pinnedIds(),
+            archivedIds = TripPrefsStore.archivedIds()
+        )
+    )
     val state: StateFlow<TripsState> = _state.asStateFlow()
 
     init {
         loadTrips()
+    }
+
+    fun togglePinned(tripId: String) {
+        val updated = TripPrefsStore.togglePinned(tripId)
+        _state.value = _state.value.copy(pinnedIds = updated)
+    }
+
+    fun toggleArchived(tripId: String) {
+        val updated = TripPrefsStore.toggleArchived(tripId)
+        _state.value = _state.value.copy(archivedIds = updated)
+    }
+
+    fun setShowArchived(show: Boolean) {
+        _state.value = _state.value.copy(showArchived = show)
     }
 
     fun loadTrips() {
