@@ -151,6 +151,19 @@ fun TripSettingsScreen(trip: Trip, currentUser: User?, onBack: () -> Unit) {
             }
         }
 
+        // ── My Trip Info (plus-one, arrival, chat handle) ─────────────────────
+        if (myMember != null) {
+            MyTripInfoCard(
+                member = myMember,
+                onSaved = {
+                    scope.launch {
+                        try { members = ApiClient.apiService.getMembers(trip.id) }
+                        catch (_: Exception) {}
+                    }
+                }
+            )
+        }
+
         // ── Members ───────────────────────────────────────────────────────────
         Surface(shape = RoundedCornerShape(16.dp), color = CardBackground, shadowElevation = 2.dp) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -77,10 +77,36 @@ data class TripMember(
     // locked-date trip; feeds expense-split window exclusion.
     val attendFrom: String? = null,
     val attendUntil: String? = null,
+    // Plus-one (guest the member is bringing) and arrival logistics —
+    // server stores both as JSON strings; PlusOneInfo / ArrivalInfo
+    // helpers below parse them on demand. We hold the raw string so a
+    // round-trip read/write preserves any forward-compat keys the
+    // server adds later.
+    val plusOne: String? = null,
+    val arrivalInfo: String? = null,
+    // Preferred off-app messaging — surfaces in the group chat handle row
+    // so members can ping each other on iMessage/WhatsApp/etc.
+    val chatPlatform: String? = null,
+    val chatHandle: String? = null,
     val joinedAt: String? = null,
     val avatarUrl: String? = null,
     val email: String? = null,
     val user: User? = null
+)
+
+data class PlusOneInfo(
+    val bringing: Boolean = false,
+    val name: String? = null,
+    val relationship: String? = null,
+    val costSplit: String? = null
+)
+
+data class ArrivalInfo(
+    val flightNumber: String? = null,
+    val arrivalTime: String? = null,
+    val airport: String? = null,
+    val terminal: String? = null,
+    val needsPickup: Boolean? = null
 )
 
 // ─── DecisionLock ────────────────────────────────────────────────────────────
