@@ -260,6 +260,53 @@ data class RewindTripRef(
     val coverImage: String? = null
 )
 
+// ─── TripSnap ────────────────────────────────────────────────────────────────
+
+data class TripSnapReaction(
+    val emoji: String,
+    val count: Int = 0,
+    val mine: Boolean = false
+)
+
+data class TripSnapItem(
+    val id: String,
+    val mediaUrl: String,
+    val mediaType: String = "image",
+    val caption: String? = null,
+    val createdAt: String? = null,
+    val expiresAt: String? = null,
+    val seen: Boolean = false,
+    val reactions: List<TripSnapReaction> = emptyList()
+)
+
+data class TripSnapAuthor(
+    val authorId: String,
+    val authorName: String,
+    val authorAvatar: String? = null,
+    val isMe: Boolean = false,
+    val unseenCount: Int = 0,
+    val totalCount: Int = 0,
+    val snaps: List<TripSnapItem> = emptyList()
+)
+
+data class TripSnapsResponse(
+    val authors: List<TripSnapAuthor> = emptyList(),
+    val totalSnaps: Int = 0
+)
+
+data class TripSnapUploadResponse(
+    val id: String,
+    val mediaUrl: String,
+    val mediaType: String = "image",
+    val caption: String? = null,
+    val createdAt: String? = null,
+    val expiresAt: String? = null
+)
+
+data class SnapReactionToggleResponse(
+    val active: Boolean = false
+)
+
 data class RewindResponse(
     val year: Int,
     val displayName: String,

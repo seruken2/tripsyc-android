@@ -134,6 +134,31 @@ interface ApiService {
     @GET("api/rewind")
     suspend fun getRewind(@Query("year") year: Int? = null): RewindResponse
 
+    // ─── Snaps ─────────────────────────────────────────────────────────────
+
+    @GET("api/trips/{id}/snaps")
+    suspend fun getSnaps(@Path("id") tripId: String): TripSnapsResponse
+
+    @retrofit2.http.Multipart
+    @POST("api/trips/{id}/snaps")
+    suspend fun uploadSnap(
+        @Path("id") tripId: String,
+        @retrofit2.http.Part file: okhttp3.MultipartBody.Part,
+        @retrofit2.http.Part("caption") caption: okhttp3.RequestBody? = null
+    ): TripSnapUploadResponse
+
+    @POST("api/snaps/{id}")
+    suspend fun markSnapViewed(@Path("id") snapId: String, @Body body: Map<String, String> = emptyMap()): Response<Unit>
+
+    @PATCH("api/snaps/{id}")
+    suspend fun toggleSnapReaction(
+        @Path("id") snapId: String,
+        @Body body: Map<String, String>
+    ): SnapReactionToggleResponse
+
+    @DELETE("api/snaps/{id}")
+    suspend fun deleteSnap(@Path("id") snapId: String): Response<Unit>
+
     // ─── Members ──────────────────────────────────────────────────────────────
 
     @GET("api/trip-members/{tripId}")
