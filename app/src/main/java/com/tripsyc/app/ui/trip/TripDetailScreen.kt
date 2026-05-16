@@ -203,7 +203,8 @@ fun TripDetailScreen(
                 TripTab.Budget -> BudgetScreen(tripId = freshTrip.id)
                 TripTab.Chat -> ChatScreen(
                     tripId = freshTrip.id,
-                    currentUser = currentUser
+                    currentUser = currentUser,
+                    isOrganizer = isOrganizer
                 )
                 TripTab.More -> MoreMenuScreen(
                     trip = freshTrip,

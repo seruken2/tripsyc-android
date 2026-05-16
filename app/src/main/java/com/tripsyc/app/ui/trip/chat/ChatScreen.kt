@@ -12,7 +12,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,15 +48,17 @@ private val QUICK_EMOJIS = listOf("❤️", "😂", "😮", "😢", "👍", "�
 @Composable
 fun ChatScreen(
     tripId: String,
-    currentUser: User?
+    currentUser: User?,
+    isOrganizer: Boolean = false
 ) {
     var messages by remember { mutableStateOf<List<ChatMessageWithUser>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var messageText by remember { mutableStateOf("") }
     var isSending by remember { mutableStateOf(false) }
     var nextCursor by remember { mutableStateOf<String?>(null) }
+    var actionTargetMessage by remember { mutableStateOf<ChatMessageWithUser?>(null) }
+    val clipboard = LocalClipboardManager.current
     var typingNames by remember { mutableStateOf<List<String>>(emptyList()) }
-    var reactionTargetMessage by remember { mutableStateOf<ChatMessageWithUser?>(null) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
@@ -165,7 +174,7 @@ fun ChatScreen(
                                 message = message,
                                 isCurrentUser = isMe,
                                 currentUserId = currentUser?.id,
-                                onLongPress = { reactionTargetMessage = message },
+                                onLongPress = { actionTargetMessage = message },
                                 modifier = Modifier.padding(
                                     horizontal = 12.dp,
                                     vertical = 2.dp
@@ -288,15 +297,18 @@ fun ChatScreen(
         }
     }
 
-    // Emoji reaction picker
-    reactionTargetMessage?.let { targetMsg ->
+    // Long-press action sheet — react row + per-message actions (pin,
+    // delete, copy). Author and organizer get different action sets.
+    actionTargetMessage?.let { targetMsg ->
+        val isAuthor = targetMsg.userId == currentUser?.id
+        val canDelete = isAuthor || isOrganizer
         ModalBottomSheet(
-            onDismissRequest = { reactionTargetMessage = null },
+            onDismissRequest = { actionTargetMessage = null },
             containerColor = Color.White
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text("React", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 16.sp)
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -309,7 +321,7 @@ fun ChatScreen(
                             color = if (myReaction != null) Coral.copy(alpha = 0.15f) else Chalk100,
                             modifier = Modifier.size(48.dp),
                             onClick = {
-                                reactionTargetMessage = null
+                                actionTargetMessage = null
                                 scope.launch {
                                     try {
                                         if (myReaction != null) {
@@ -332,7 +344,87 @@ fun ChatScreen(
                         }
                     }
                 }
+
+                // Per-message action rows below the reactions.
+                ActionRow(
+                    icon = Icons.Default.ContentCopy,
+                    label = "Copy text",
+                    onClick = {
+                        clipboard.setText(AnnotatedString(targetMsg.text))
+                        actionTargetMessage = null
+                    }
+                )
+
+                if (isOrganizer) {
+                    ActionRow(
+                        icon = if (targetMsg.isPinned) Icons.Default.PushPin else Icons.Outlined.PushPin,
+                        label = if (targetMsg.isPinned) "Unpin message" else "Pin message",
+                        tint = Gold,
+                        onClick = {
+                            val target = targetMsg
+                            actionTargetMessage = null
+                            scope.launch {
+                                try {
+                                    ApiClient.apiService.patchMessage(
+                                        mapOf(
+                                            "messageId" to target.id,
+                                            "isPinned" to !target.isPinned
+                                        )
+                                    )
+                                    // Optimistic local flip so the pin icon
+                                    // updates without waiting for a refetch.
+                                    messages = messages.map {
+                                        if (it.id == target.id) it.copy(isPinned = !target.isPinned)
+                                        else it
+                                    }
+                                } catch (_: Exception) {}
+                            }
+                        }
+                    )
+                }
+
+                if (canDelete) {
+                    ActionRow(
+                        icon = Icons.Default.Delete,
+                        label = "Delete message",
+                        tint = Danger,
+                        onClick = {
+                            val target = targetMsg
+                            actionTargetMessage = null
+                            scope.launch {
+                                try {
+                                    ApiClient.apiService.deleteMessage(mapOf("messageId" to target.id))
+                                    messages = messages.filter { it.id != target.id }
+                                } catch (_: Exception) {}
+                            }
+                        }
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun ActionRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: Color = Chalk700,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Chalk100,
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            Text(label, color = tint, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -405,6 +497,30 @@ private fun MessageBubble(
                 Column(
                     horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
                 ) {
+                    // Pin badge — only on messages an organizer pinned. Shown
+                    // above the bubble so the pin context survives a reply
+                    // chain without crowding the message body.
+                    if (message.isPinned) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PushPin,
+                                contentDescription = "Pinned",
+                                tint = Gold,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Text(
+                                text = "Pinned",
+                                color = Gold,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
                     // Reply context
                     if (message.replyTo != null) {
                         Surface(

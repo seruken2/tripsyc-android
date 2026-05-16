@@ -151,6 +151,9 @@ interface ApiService {
     @POST("api/chat")
     suspend fun sendMessage(@Body body: Map<String, Any?>): ChatMessageWithUser
 
+    @PATCH("api/chat")
+    suspend fun patchMessage(@Body body: Map<String, Any?>): Response<Map<String, Any?>>
+
     @HTTP(method = "DELETE", path = "api/chat", hasBody = true)
     suspend fun deleteMessage(@Body body: Map<String, String>): Response<Unit>
 

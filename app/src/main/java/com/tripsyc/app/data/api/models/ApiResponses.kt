@@ -28,6 +28,8 @@ data class ChatMessageWithUser(
     val imageUrl: String? = null,
     val replyToId: String? = null,
     val replyTo: ReplyInfo? = null,
+    val isPinned: Boolean = false,
+    val editedAt: String? = null,
     val createdAt: String? = null,
     val user: ChatUser,
     val reactions: List<GroupedReaction>? = null
