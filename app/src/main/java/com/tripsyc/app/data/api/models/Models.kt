@@ -109,6 +109,23 @@ data class ArrivalInfo(
     val needsPickup: Boolean? = null
 )
 
+// ─── PastCoTraveler ──────────────────────────────────────────────────────────
+
+data class PastCoTraveler(
+    val userId: String,
+    val name: String,
+    val email: String,
+    val avatarUrl: String? = null,
+    val sharedTripCount: Int = 1,
+    val lastTripId: String,
+    val lastTripName: String,
+    val lastTripAt: String? = null
+)
+
+data class PastCoTravelersResponse(
+    val coTravelers: List<PastCoTraveler>
+)
+
 // ─── DecisionLock ────────────────────────────────────────────────────────────
 
 data class DecisionLock(

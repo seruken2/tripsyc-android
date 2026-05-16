@@ -3,10 +3,19 @@ package com.tripsyc.app.ui.trip.invite
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.tripsyc.app.data.api.models.PastCoTraveler
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +41,22 @@ fun InviteScreen(trip: Trip) {
     var successMessage by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var copied by remember { mutableStateOf(false) }
+    var coTravelers by remember { mutableStateOf<List<PastCoTraveler>>(emptyList()) }
+    // Tracks which past-co-traveler emails the viewer has invited *during
+    // this session* so the button can flip from "+ Invite" to a checkmark
+    // without a full reload. Cleared on screen recompose.
+    val invitedEmails = remember { mutableStateListOf<String>() }
+
+    LaunchedEffect(trip.id) {
+        try {
+            coTravelers = ApiClient.apiService
+                .getPastCoTravelers(excludeTripId = trip.id)
+                .coTravelers
+        } catch (_: Exception) {
+            // Past-co-travelers is a nice-to-have; failure shouldn't
+            // break the rest of the invite flow.
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -153,6 +178,59 @@ fun InviteScreen(trip: Trip) {
             }
         }
 
+        // Past co-travelers — quick-invite anyone the viewer has
+        // already shared a trip with so the email field doesn't have
+        // to be retyped every time.
+        if (coTravelers.isNotEmpty()) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = CardBackground,
+                shadowElevation = 2.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        "Past co-travelers",
+                        fontWeight = FontWeight.SemiBold,
+                        color = Chalk900
+                    )
+                    Text(
+                        "Quick-invite anyone you've already taken a trip with.",
+                        fontSize = 12.sp,
+                        color = Chalk500
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(coTravelers, key = { it.userId }) { traveler ->
+                            PastCoTravelerChip(
+                                traveler = traveler,
+                                invited = invitedEmails.contains(traveler.email),
+                                isBusy = isSending,
+                                onInvite = {
+                                    val email = traveler.email
+                                    scope.launch {
+                                        isSending = true
+                                        try {
+                                            ApiClient.apiService.inviteMember(
+                                                trip.id,
+                                                mapOf("email" to email)
+                                            )
+                                            invitedEmails.add(email)
+                                            successMessage = "Invited ${traveler.name}!"
+                                        } catch (e: Exception) {
+                                            errorMessage = e.message ?: "Couldn't invite"
+                                        }
+                                        isSending = false
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Current members
         if (!trip.members.isNullOrEmpty()) {
             Surface(
@@ -195,6 +273,80 @@ fun InviteScreen(trip: Trip) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PastCoTravelerChip(
+    traveler: PastCoTraveler,
+    invited: Boolean,
+    isBusy: Boolean,
+    onInvite: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = if (invited) Sage.copy(alpha = 0.10f) else Chalk100,
+        onClick = { if (!invited && !isBusy) onInvite() }
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 10.dp, vertical = 10.dp)
+                .width(96.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Coral.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!traveler.avatarUrl.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = traveler.avatarUrl,
+                        contentDescription = traveler.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text(
+                        traveler.name.firstOrNull()?.uppercase() ?: "?",
+                        color = Coral,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Text(
+                traveler.name.split(" ").firstOrNull() ?: traveler.name,
+                fontSize = 12.sp,
+                color = Chalk900,
+                maxLines = 1
+            )
+            Text(
+                "${traveler.sharedTripCount} trip${if (traveler.sharedTripCount == 1) "" else "s"}",
+                fontSize = 10.sp,
+                color = Chalk500,
+                maxLines = 1
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Icon(
+                    imageVector = if (invited) Icons.Default.Check else Icons.Default.Add,
+                    contentDescription = null,
+                    tint = if (invited) Sage else Coral,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    if (invited) "Invited" else "Invite",
+                    color = if (invited) Sage else Coral,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }

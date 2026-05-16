@@ -43,6 +43,11 @@ interface ApiService {
         @Body body: Map<String, String>
     ): Response<Unit>
 
+    @GET("api/past-co-travelers")
+    suspend fun getPastCoTravelers(
+        @Query("excludeTripId") excludeTripId: String? = null
+    ): PastCoTravelersResponse
+
     // ─── Members ──────────────────────────────────────────────────────────────
 
     @GET("api/trip-members/{tripId}")
