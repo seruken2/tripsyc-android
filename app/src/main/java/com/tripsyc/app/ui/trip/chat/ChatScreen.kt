@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PushPin
@@ -57,6 +58,7 @@ fun ChatScreen(
     var isSending by remember { mutableStateOf(false) }
     var nextCursor by remember { mutableStateOf<String?>(null) }
     var actionTargetMessage by remember { mutableStateOf<ChatMessageWithUser?>(null) }
+    var replyingTo by remember { mutableStateOf<ChatMessageWithUser?>(null) }
     val clipboard = LocalClipboardManager.current
     var typingNames by remember { mutableStateOf<List<String>>(emptyList()) }
     val scope = rememberCoroutineScope()
@@ -215,12 +217,66 @@ fun ChatScreen(
             shadowElevation = 4.dp,
             tonalElevation = 0.dp
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding()
+            ) {
+                // Reply preview — shown above the input when the user has
+                // picked a message to reply to via long-press. Tap the X
+                // to clear without sending.
+                replyingTo?.let { target ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = Chalk100
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(3.dp)
+                                    .height(28.dp)
+                                    .background(Coral, RoundedCornerShape(2.dp))
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Replying to ${target.user.name ?: "someone"}",
+                                    fontSize = 11.sp,
+                                    color = Coral,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = target.text.take(80),
+                                    fontSize = 12.sp,
+                                    color = Chalk500,
+                                    maxLines = 1
+                                )
+                            }
+                            IconButton(
+                                onClick = { replyingTo = null },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Cancel reply",
+                                    tint = Chalk500,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                    .navigationBarsPadding()
-                    .imePadding(),
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -264,13 +320,18 @@ fun ChatScreen(
                     onClick = {
                         if (!canSend) return@IconButton
                         val text = messageText.trim()
+                        val replyId = replyingTo?.id
                         messageText = ""
+                        replyingTo = null
                         scope.launch {
                             isSending = true
                             try {
-                                val sent = ApiClient.apiService.sendMessage(
-                                    mapOf("tripId" to tripId, "text" to text)
-                                )
+                                val body = buildMap<String, Any?> {
+                                    put("tripId", tripId)
+                                    put("text", text)
+                                    if (replyId != null) put("replyToId", replyId)
+                                }
+                                val sent = ApiClient.apiService.sendMessage(body)
                                 messages = messages + sent
                                 if (messages.isNotEmpty()) {
                                     listState.animateScrollToItem(messages.size - 1)
@@ -293,6 +354,7 @@ fun ChatScreen(
                         modifier = Modifier.size(16.dp)
                     )
                 }
+            }
             }
         }
     }
@@ -346,6 +408,15 @@ fun ChatScreen(
                 }
 
                 // Per-message action rows below the reactions.
+                ActionRow(
+                    icon = Icons.Default.Reply,
+                    label = "Reply",
+                    onClick = {
+                        replyingTo = targetMsg
+                        actionTargetMessage = null
+                    }
+                )
+
                 ActionRow(
                     icon = Icons.Default.ContentCopy,
                     label = "Copy text",
