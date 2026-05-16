@@ -41,6 +41,7 @@ fun DestinationsScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var showAddSheet by remember { mutableStateOf(false) }
     var selectedDestination by remember { mutableStateOf<Destination?>(null) }
+    var showCompare by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val isLocked = existingLock?.locked == true
 
@@ -78,16 +79,29 @@ fun DestinationsScreen(
                         fontSize = 13.sp, color = Chalk500
                     )
                 }
-                if (!isLocked) {
-                    IconButton(onClick = { showAddSheet = true }) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(Coral),
-                            contentAlignment = Alignment.Center
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (destinations.size >= 2) {
+                        OutlinedButton(
+                            onClick = { showCompare = true },
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
+                            Icon(Icons.Default.Compare, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Compare", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    if (!isLocked) {
+                        IconButton(onClick = { showAddSheet = true }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Coral),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
+                            }
                         }
                     }
                 }
@@ -158,6 +172,18 @@ fun DestinationsScreen(
             onDismiss = { showAddSheet = false },
             onAdded = { loadDestinations() }
         )
+    }
+
+    if (showCompare) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showCompare = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            DestinationCompareSheet(
+                destinations = destinations,
+                onDismiss = { showCompare = false }
+            )
+        }
     }
 
     // Navigate to destination detail
