@@ -172,6 +172,12 @@ fun DestinationDetailScreen(
                 }
             }
 
+            // Environment chips (local time, air quality, pollen) —
+            // fetched lazily off the destination's own endpoint.
+            item {
+                DestinationEnvironmentBadges(destinationId = destination.id)
+            }
+
             // Voting + Dealbreaker row
             item {
                 Row(

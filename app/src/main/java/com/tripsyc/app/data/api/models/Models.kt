@@ -126,6 +126,37 @@ data class PastCoTravelersResponse(
     val coTravelers: List<PastCoTraveler>
 )
 
+// ─── DestinationEnvironment ─────────────────────────────────────────────────
+//
+// Any field may be null when the upstream Google API call fails or the
+// destination can't be geocoded. UI renders the chips that have data and
+// silently drops the rest.
+
+data class DestinationEnvironment(
+    val airQuality: AirQuality? = null,
+    val pollen: Pollen? = null,
+    val localTime: String? = null,
+    val timezone: String? = null,
+    val staticMapUrl: String? = null
+) {
+    data class AirQuality(
+        val aqi: Int,
+        val category: String,
+        val dominantPollutant: String? = null,
+        val color: String? = null
+    )
+
+    data class Pollen(
+        val overall: String,
+        val types: List<PollenType> = emptyList()
+    ) {
+        data class PollenType(
+            val name: String,
+            val category: String
+        )
+    }
+}
+
 // ─── DecisionLock ────────────────────────────────────────────────────────────
 
 data class DecisionLock(

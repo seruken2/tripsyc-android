@@ -48,6 +48,11 @@ interface ApiService {
         @Query("excludeTripId") excludeTripId: String? = null
     ): PastCoTravelersResponse
 
+    @GET("api/destinations/{id}/environment")
+    suspend fun getDestinationEnvironment(
+        @Path("id") destinationId: String
+    ): DestinationEnvironment
+
     // ─── Members ──────────────────────────────────────────────────────────────
 
     @GET("api/trip-members/{tripId}")
