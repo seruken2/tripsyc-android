@@ -131,6 +131,9 @@ interface ApiService {
         @Query("memberId") memberId: String
     ): Response<Unit>
 
+    @GET("api/rewind")
+    suspend fun getRewind(@Query("year") year: Int? = null): RewindResponse
+
     // ─── Members ──────────────────────────────────────────────────────────────
 
     @GET("api/trip-members/{tripId}")

@@ -229,6 +229,50 @@ data class CrewCount(
     val trips: Int? = null
 )
 
+// ─── Rewind (year-end wrap) ──────────────────────────────────────────────────
+
+data class RewindTotals(
+    val tripCount: Int = 0,
+    val nights: Int = 0,
+    val countries: Int = 0,
+    val cities: Int = 0,
+    val chatMessages: Int = 0,
+    val photos: Int = 0,
+    val personalSpendUsd: Int = 0
+)
+
+data class RewindBuddy(
+    val name: String,
+    val avatarUrl: String? = null,
+    val trips: Int
+)
+
+data class RewindPersona(
+    val tag: String,
+    val label: String,
+    val blurb: String,
+    val emoji: String
+)
+
+data class RewindTripRef(
+    val id: String,
+    val name: String,
+    val coverImage: String? = null
+)
+
+data class RewindResponse(
+    val year: Int,
+    val displayName: String,
+    val totals: RewindTotals = RewindTotals(),
+    val destinations: List<String> = emptyList(),
+    val countries: List<String> = emptyList(),
+    val topBuddies: List<RewindBuddy> = emptyList(),
+    val topMonth: String? = null,
+    val persona: RewindPersona,
+    val upcomingTrips: List<RewindTripRef> = emptyList(),
+    val trips: List<RewindTripRef> = emptyList()
+)
+
 // ─── DestinationEnvironment ─────────────────────────────────────────────────
 //
 // Any field may be null when the upstream Google API call fails or the

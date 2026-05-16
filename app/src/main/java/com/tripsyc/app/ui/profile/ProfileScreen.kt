@@ -60,6 +60,7 @@ fun ProfileScreen(
     var isUploadingAvatar by remember { mutableStateOf(false) }
     var avatarError by remember { mutableStateOf<String?>(null) }
     var showCrews by remember { mutableStateOf(false) }
+    var showRewind by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val avatarPicker = rememberLauncherForActivityResult(
@@ -104,6 +105,11 @@ fun ProfileScreen(
 
     if (isLoading) {
         LoadingView("Loading profile...")
+        return
+    }
+
+    if (showRewind) {
+        com.tripsyc.app.ui.rewind.RewindScreen(onBack = { showRewind = false })
         return
     }
 
@@ -360,6 +366,43 @@ fun ProfileScreen(
                     Text("Crews", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 14.sp)
                     Text(
                         "Saved travel groups for one-tap invites",
+                        fontSize = 12.sp,
+                        color = Chalk500
+                    )
+                }
+                Icon(
+                    androidx.compose.material.icons.Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Chalk400
+                )
+            }
+        }
+
+        // Rewind — year-end recap
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = CardBackground,
+            shadowElevation = 1.dp,
+            onClick = { showRewind = true }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(Gold.copy(alpha = 0.16f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🎞️", fontSize = 14.sp)
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Tripsyc Rewind", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 14.sp)
+                    Text(
+                        "Your year in travel — totals, crew, persona",
                         fontSize = 12.sp,
                         color = Chalk500
                     )
