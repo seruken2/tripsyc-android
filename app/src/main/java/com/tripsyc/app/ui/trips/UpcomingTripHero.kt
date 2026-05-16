@@ -65,7 +65,17 @@ fun UpcomingTripHero(
         }
         .minByOrNull { it.second }
 
-    if (nextTrip == null) return false
+    if (nextTrip == null) {
+        // Fall through to a memory flashback when no upcoming trip
+        // exists — anniversary today / last year / N years ago lands
+        // a "Remember when…" card instead of an empty slot.
+        val anchor = computeMemoryAnchor(trips, today)
+        if (anchor != null) {
+            MemoryFlashbackCard(anchor = anchor, onTap = { onTap(anchor.trip) })
+            return true
+        }
+        return false
+    }
 
     val (trip, start) = nextTrip
     val daysLeft = ChronoUnit.DAYS.between(today, start).coerceAtLeast(0)
@@ -164,4 +174,96 @@ private fun Trip.lockedStartDate(): LocalDate? {
     val value = lock.lockedValue ?: return null
     val first = value.split(" to ").firstOrNull()?.trim() ?: return null
     return runCatching { LocalDate.parse(first) }.getOrNull()
+}
+
+private data class MemoryAnchor(
+    val trip: Trip,
+    val yearsAgo: Int
+)
+
+/// Finds a past trip whose date range covered today's month/day in
+/// some prior year (up to 9 back). Picks the most recent anniversary
+/// so we don't rotate through the same ancient trip every day.
+private fun computeMemoryAnchor(trips: List<Trip>, today: LocalDate): MemoryAnchor? {
+    var best: MemoryAnchor? = null
+    for (trip in trips) {
+        val lock = trip.locks?.firstOrNull { it.lockType == LockType.DATE && it.locked } ?: continue
+        val value = lock.lockedValue ?: continue
+        val parts = value.split(" to ")
+        if (parts.size != 2) continue
+        val start = runCatching { LocalDate.parse(parts[0].trim()) }.getOrNull() ?: continue
+        val end = runCatching { LocalDate.parse(parts[1].trim()) }.getOrNull() ?: continue
+        if (!end.isBefore(today)) continue   // only past trips
+        for (y in 1..9) {
+            val anniversary = today.minusYears(y.toLong())
+            if (!anniversary.isBefore(start) && !anniversary.isAfter(end)) {
+                if (best == null || y < best.yearsAgo) {
+                    best = MemoryAnchor(trip, y)
+                }
+                break
+            }
+        }
+    }
+    return best
+}
+
+@Composable
+private fun MemoryFlashbackCard(anchor: MemoryAnchor, onTap: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .height(168.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(Brush.linearGradient(listOf(Dusk, Coral)))
+            .clickable { onTap() }
+    ) {
+        if (!anchor.trip.coverImage.isNullOrEmpty() &&
+            (anchor.trip.coverImage.startsWith("https://") || anchor.trip.coverImage.startsWith("http://"))
+        ) {
+            AsyncImage(
+                model = anchor.trip.coverImage,
+                contentDescription = anchor.trip.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))
+                    )
+                )
+        )
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(20.dp)
+        ) {
+            Text(
+                "${anchor.yearsAgo} YEAR${if (anchor.yearsAgo == 1) "" else "S"} AGO TODAY",
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.4.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                anchor.trip.name,
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Tap to revisit",
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
 }
