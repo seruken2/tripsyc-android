@@ -269,6 +269,7 @@ private fun MemberRow(
     onKick: () -> Unit
 ) {
     var showRoleMenu by remember { mutableStateOf(false) }
+    var showTransferConfirm by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -319,6 +320,24 @@ private fun MemberRow(
                             onClick = { showRoleMenu = false; onRoleChange(MemberRole.MEMBER) }
                         )
                     }
+                    // Only the CREATOR can hand off the role — gates a
+                    // permanent transfer behind a confirm dialog.
+                    if (myRole == MemberRole.CREATOR) {
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Transfer creator role…",
+                                    color = Danger,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            },
+                            onClick = {
+                                showRoleMenu = false
+                                showTransferConfirm = true
+                            }
+                        )
+                    }
                 }
             }
 
@@ -326,6 +345,31 @@ private fun MemberRow(
                 Icon(Icons.Default.PersonRemove, contentDescription = "Remove", tint = Danger.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
             }
         }
+    }
+
+    if (showTransferConfirm) {
+        AlertDialog(
+            onDismissRequest = { showTransferConfirm = false },
+            title = { Text("Transfer creator role?") },
+            text = {
+                Text(
+                    "Hand the trip over to ${member.name}? You'll become a " +
+                    "co-organizer. This can't be undone without their cooperation."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showTransferConfirm = false
+                        onRoleChange(MemberRole.CREATOR)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Danger)
+                ) { Text("Transfer") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showTransferConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 
     HorizontalDivider(color = Chalk100, modifier = Modifier.padding(top = 8.dp))
