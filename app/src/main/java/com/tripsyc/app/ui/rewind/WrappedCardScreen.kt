@@ -74,7 +74,13 @@ fun WrappedCardScreen(onBack: () -> Unit) {
                 actions = {
                     IconButton(
                         onClick = {
-                            if (data == null || isSharing) return@IconButton
+                            // Guard: data must be loaded, share must not
+                            // already be in flight, and the layer must
+                            // have been recorded at least once. The last
+                            // condition prevents IllegalStateException
+                            // on first-frame Share-button mash before
+                            // the card has drawn.
+                            if (data == null || isSharing || graphicsLayer.size.width == 0) return@IconButton
                             scope.launch {
                                 isSharing = true
                                 try {

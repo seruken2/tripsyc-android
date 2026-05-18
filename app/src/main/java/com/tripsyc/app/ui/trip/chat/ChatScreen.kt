@@ -542,8 +542,14 @@ fun ChatScreen(
 
                 // Send button — coral when can send, chalk200 otherwise.
                 // Sendable when either text is present OR an image
-                // attachment finished compressing.
-                val canSend = (messageText.isNotBlank() || pendingImageDataUri != null) && !isSending
+                // attachment finished compressing. If the user picked
+                // an image and tapped send before compression finishes,
+                // the image would get dropped — so we block the button
+                // while compression is in flight (pendingImageUri set
+                // but pendingImageDataUri still null).
+                val imageStillCompressing = pendingImageUri != null && pendingImageDataUri == null
+                val canSend = (messageText.isNotBlank() || pendingImageDataUri != null) &&
+                    !isSending && !imageStillCompressing
                 IconButton(
                     onClick = {
                         if (!canSend) return@IconButton

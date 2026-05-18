@@ -91,6 +91,12 @@ class MainActivity : ComponentActivity() {
                 val session = data.getQueryParameter("session")
                 if (!session.isNullOrBlank()) {
                     ApiClient.setSessionCookie(session)
+                    // Drop the deep-link payload off the Intent before
+                    // recreate(), otherwise the rebuilt MainActivity
+                    // would re-enter this branch and recreate again —
+                    // infinite loop.
+                    intent.data = null
+                    intent.replaceExtras(null as android.os.Bundle?)
                     // AppNavigation reads the session once at start.
                     // Recreate the activity so the cookie picks up and
                     // the user lands on Main instead of staying on
