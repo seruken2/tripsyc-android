@@ -21,7 +21,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -61,67 +60,39 @@ fun LoginScreen(
             .background(Chalk50)
     ) {
         // ── Hero Section ──────────────────────────────────────────────────
+        // iOS LoginView uses a cream chalk50 background with the native-
+        // coloured wordmark, NOT a coral gradient with a white-tinted
+        // wordmark. Android was rendering the logo in white on a coral
+        // wash — readable but on-brand-wrong, and at certain device
+        // gamuts the logo looked nearly invisible. Switched to match.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(280.dp)
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Coral,
-                            Color(0xFFB84020)
-                        )
-                    )
-                ),
+                .background(Chalk50),
             contentAlignment = Alignment.Center
         ) {
-            // Decorative circles
-            Box(
-                modifier = Modifier
-                    .size(220.dp)
-                    .offset(x = (-100).dp, y = (-70).dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color.White.copy(alpha = 0.06f))
-            )
-            Box(
-                modifier = Modifier
-                    .size(160.dp)
-                    .offset(x = 120.dp, y = 50.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color.White.copy(alpha = 0.04f))
-            )
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .offset(x = 80.dp, y = (-90).dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color.White.copy(alpha = 0.05f))
-            )
-
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.padding(horizontal = 24.dp)
             ) {
-                // Wordmark only — matches iOS LoginView which shows the
-                // wordmark logo at 260pt wide as the sole identity mark.
-                // The app icon was a duplicate brand surface stacked
-                // above the wordmark; users saw "Tripsyc" twice.
+                // Wordmark, untinted so the native coral letters paint
+                // against the cream background — matches iOS verbatim.
                 Image(
                     painter = painterResource(R.drawable.tripsyc_logo),
                     contentDescription = "Tripsyc",
                     modifier = Modifier
-                        .height(56.dp)
+                        .height(60.dp)
                         .widthIn(max = 260.dp),
-                    colorFilter = ColorFilter.tint(Color.White),
                     contentScale = ContentScale.Fit
                 )
 
-                // Tagline
+                // Tagline — same chalk500 tone iOS uses for body copy.
                 Text(
                     text = "Plan trips together, without the chaos",
-                    color = Color.White.copy(alpha = 0.75f),
-                    fontSize = 13.sp,
+                    color = Chalk500,
+                    fontSize = 14.sp,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Medium
                 )
