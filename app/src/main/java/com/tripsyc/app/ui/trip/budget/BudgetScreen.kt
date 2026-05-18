@@ -182,6 +182,20 @@ fun BudgetScreen(tripId: String) {
             }
         }
 
+        // Spending pace recap — self-suppresses if no budget set or no
+        // locked date range, so the card only shows up when the math
+        // actually says something.
+        val myBudgetForPace = budgetData?.myBudget
+        if (myBudgetForPace != null) {
+            item {
+                SpendingPaceCard(
+                    tripId = tripId,
+                    budgetMax = myBudgetForPace.budgetMax,
+                    currency = budgetData?.currency ?: "USD"
+                )
+            }
+        }
+
         // Group budget bands
         val data = budgetData
         if (data != null && data.showBands) {
