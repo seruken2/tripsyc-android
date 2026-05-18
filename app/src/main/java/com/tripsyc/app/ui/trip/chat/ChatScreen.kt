@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material.icons.filled.Send
@@ -61,6 +62,8 @@ fun ChatScreen(
     var actionTargetMessage by remember { mutableStateOf<ChatMessageWithUser?>(null) }
     var replyingTo by remember { mutableStateOf<ChatMessageWithUser?>(null) }
     var editingMessage by remember { mutableStateOf<ChatMessageWithUser?>(null) }
+    var reportTarget by remember { mutableStateOf<ChatMessageWithUser?>(null) }
+    var lastReportToast by remember { mutableStateOf<String?>(null) }
     // Pending image attachment for the message currently being typed.
     // We compress on the IO thread and stash the resulting data URI; on
     // send it rides along in the POST body as `imageUrl`.
@@ -579,6 +582,139 @@ fun ChatScreen(
                         }
                     )
                 }
+
+                // Report — only on other people's messages. Opens the
+                // full Report-or-Block dialog with six categories.
+                if (!isAuthor) {
+                    ActionRow(
+                        icon = Icons.Default.Flag,
+                        label = "Report…",
+                        tint = Danger,
+                        onClick = {
+                            reportTarget = targetMsg
+                            actionTargetMessage = null
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    // Report / block dialog — six categories + Block this user, exact
+    // labels and copy from iOS so moderators see consistent reasons
+    // across platforms.
+    reportTarget?.let { target ->
+        val authorName = target.user.name ?: "user"
+        AlertDialog(
+            onDismissRequest = { reportTarget = null },
+            title = { Text("Report $authorName?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "Our moderation team reviews every report. You can also block this user so you won't see their messages in any trip.",
+                        color = Chalk500,
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    listOf(
+                        "Harassment or bullying" to "HARASSMENT",
+                        "Hate speech" to "HATE",
+                        "Spam or scam" to "SPAM",
+                        "Sexual content" to "SEXUAL",
+                        "Threats or violence" to "THREATS",
+                        "Something else" to "OTHER"
+                    ).forEach { (label, kind) ->
+                        TextButton(
+                            onClick = {
+                                val mid = target.id
+                                reportTarget = null
+                                scope.launch {
+                                    try {
+                                        ApiClient.apiService.reportContent(
+                                            mapOf(
+                                                "targetType" to "chat_message",
+                                                "targetId" to mid,
+                                                "kind" to kind,
+                                                "note" to null
+                                            )
+                                        )
+                                        lastReportToast = "Thanks, our team will review."
+                                    } catch (_: Exception) {
+                                        lastReportToast = "Couldn't submit report — try again."
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(vertical = 6.dp)
+                        ) {
+                            Text(
+                                label,
+                                color = Chalk900,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start
+                            )
+                        }
+                    }
+                    HorizontalDivider(color = Chalk100, modifier = Modifier.padding(vertical = 4.dp))
+                    TextButton(
+                        onClick = {
+                            val uid = target.userId
+                            reportTarget = null
+                            scope.launch {
+                                try {
+                                    ApiClient.apiService.blockUser(
+                                        mapOf("blockedId" to uid, "reason" to null)
+                                    )
+                                    messages = messages.filter { it.userId != uid }
+                                    lastReportToast = "Blocked $authorName."
+                                } catch (_: Exception) {
+                                    lastReportToast = "Couldn't block — try again."
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(vertical = 6.dp)
+                    ) {
+                        Text(
+                            "Block $authorName",
+                            color = Danger,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Start
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { reportTarget = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Simple bottom toast for report / block results — matches the
+    // ToastData pattern used elsewhere in the app.
+    lastReportToast?.let { msg ->
+        LaunchedEffect(msg) {
+            kotlinx.coroutines.delay(2500)
+            lastReportToast = null
+        }
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Surface(
+                modifier = Modifier.padding(bottom = 80.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Chalk900,
+                shadowElevation = 6.dp
+            ) {
+                Text(
+                    msg,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                )
             }
         }
     }
