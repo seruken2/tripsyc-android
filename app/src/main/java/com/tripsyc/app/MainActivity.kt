@@ -1,11 +1,16 @@
 package com.tripsyc.app
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -30,11 +35,28 @@ class MainActivity : ComponentActivity() {
     // whole activity.
     private val bannerTripId = mutableStateOf<String?>(null)
 
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* result ignored — user choice is sticky in OS */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Wire SharedPreferences-backed pin/archive store before any
         // composable can read it.
         TripPrefsStore.init(applicationContext)
+        // POST_NOTIFICATIONS is runtime-gated since Android 13 (API
+        // 33). Without this call, FCM messages and our in-app banner
+        // bridge never surface a system notification. Manifest-only
+        // declaration is treated as "denied by default" on 13+.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
         handleIntent(intent)
         enableEdgeToEdge()
         setContent {
