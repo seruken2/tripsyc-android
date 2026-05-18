@@ -148,6 +148,12 @@ interface ApiService {
     @GET("api/trips/{id}/group-rewind")
     suspend fun getGroupRewind(@Path("id") tripId: String): GroupRewindResponse
 
+    @GET("api/rewind/wrapped")
+    suspend fun getWrapped(
+        @Query("year") year: Int? = null,
+        @Query("tripId") tripId: String? = null
+    ): WrappedResponse
+
     @GET("api/holidays")
     suspend fun getHolidays(
         @Query("country") country: String,

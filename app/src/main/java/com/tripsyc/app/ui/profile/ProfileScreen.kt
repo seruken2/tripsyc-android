@@ -61,6 +61,7 @@ fun ProfileScreen(
     var avatarError by remember { mutableStateOf<String?>(null) }
     var showCrews by remember { mutableStateOf(false) }
     var showRewind by remember { mutableStateOf(false) }
+    var showWrapped by remember { mutableStateOf(false) }
     var showDeeperFit by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -119,6 +120,11 @@ fun ProfileScreen(
 
     if (showRewind) {
         com.tripsyc.app.ui.rewind.RewindScreen(onBack = { showRewind = false })
+        return
+    }
+
+    if (showWrapped) {
+        com.tripsyc.app.ui.rewind.WrappedCardScreen(onBack = { showWrapped = false })
         return
     }
 
@@ -536,6 +542,43 @@ fun ProfileScreen(
                     Text("Deeper Group Fit", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 14.sp)
                     Text(
                         "18 compatibility axes that sharpen group fit",
+                        fontSize = 12.sp,
+                        color = Chalk500
+                    )
+                }
+                Icon(
+                    androidx.compose.material.icons.Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Chalk400
+                )
+            }
+        }
+
+        // Wrapped — shareable year-end card
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = CardBackground,
+            shadowElevation = 1.dp,
+            onClick = { showWrapped = true }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(Coral.copy(alpha = 0.16f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("📤", fontSize = 14.sp)
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Tripsyc Wrapped", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 14.sp)
+                    Text(
+                        "Shareable year-end card",
                         fontSize = 12.sp,
                         color = Chalk500
                     )

@@ -462,6 +462,36 @@ data class GroupRewindResponse(
     val destinationsConsidered: List<String> = emptyList()
 )
 
+// ─── Wrapped (shareable year-end card) ───────────────────────────────────────
+
+data class WrappedPersonalStats(
+    val tripCount: Int = 0,
+    val nights: Int = 0,
+    val cities: Int = 0,
+    val countries: Int = 0,
+    val chatMessages: Int = 0,
+    val photos: Int = 0
+)
+
+data class WrappedFeatured(
+    val id: String,
+    val name: String,
+    val destination: String? = null,
+    val dateLabel: String? = null,
+    val memberCount: Int = 0,
+    val totalSpendUsd: Int = 0,
+    val fitScore: Int = 0,
+    val fitTier: String = ""
+)
+
+data class WrappedResponse(
+    val year: Int,
+    val displayName: String,
+    val personal: WrappedPersonalStats = WrappedPersonalStats(),
+    val featured: WrappedFeatured? = null,
+    val availableTripIds: List<String> = emptyList()
+)
+
 // ─── DestinationEnvironment ─────────────────────────────────────────────────
 //
 // Any field may be null when the upstream Google API call fails or the

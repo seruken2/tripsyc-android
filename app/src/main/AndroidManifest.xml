@@ -83,6 +83,18 @@
             </intent-filter>
         </receiver>
 
+        <!-- FileProvider for sharing the Wrapped card image via
+             Intent.ACTION_SEND. Scopes to cache/wrapped only. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/share_paths" />
+        </provider>
+
     </application>
 
 </manifest>
