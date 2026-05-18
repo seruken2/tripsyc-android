@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Foreground for the Tripsyc adaptive launcher icon.
+
+  The brand asset `tripsyc_icon.png` includes the globe character + the
+  "Tripsyc" wordmark in a 512×512 square. Centering it inside the
+  108dp adaptive-icon canvas and scaling to fit lands the iconic mark
+  in the launcher's safe zone (the inner 66dp) so it stays visible
+  under any mask shape (circle, squircle, rounded square).
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:inset="14dp">
+    <bitmap
+        android:src="@drawable/tripsyc_icon"
+        android:gravity="center"
+        android:filter="true" />
+</inset>

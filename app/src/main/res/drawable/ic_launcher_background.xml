@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Background fill for the Tripsyc adaptive launcher icon. Flat coral
+  square covering the full 108×108 canvas — the system mask handles
+  the corner shape (circle / squircle / rounded rect). The previous
+  version was reused as the foreground too, which is why the icon
+  rendered as a coral square with no logo.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -7,8 +14,4 @@
     <path
         android:fillColor="#E8654A"
         android:pathData="M0,0h108v108h-108z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillAlpha="0.3"
-        android:pathData="M54,20 C54,20 20,38 20,62 C20,78 35.2,88 54,88 C72.8,88 88,78 88,62 C88,38 54,20 54,20z" />
 </vector>
