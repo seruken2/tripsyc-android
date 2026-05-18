@@ -82,6 +82,15 @@ android {
         compose = true
         buildConfig = true
     }
+
+    lint {
+        // We're a pure-Compose / ComponentActivity app — no Fragment
+        // usage anywhere. The lint check fires on any
+        // registerForActivityResult call inside a ComponentActivity
+        // because older FragmentActivity versions had a bug, but the
+        // base ComponentActivity path is fine.
+        disable.add("InvalidFragmentVersionForActivityResult")
+    }
 }
 
 dependencies {
