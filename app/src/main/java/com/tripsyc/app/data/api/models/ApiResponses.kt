@@ -222,7 +222,11 @@ data class PollOptionWithVotes(
     val pollId: String,
     val text: String,
     val voteCount: Int,
-    val votedByMe: Boolean
+    val votedByMe: Boolean,
+    // Ranked-choice only: viewer's current rank for this option,
+    // 1-indexed (1 = top choice). Null on SIMPLE polls or when the
+    // viewer hasn't ranked this option yet.
+    val myRank: Int? = null
 )
 
 data class PollWithVotes(
@@ -231,6 +235,11 @@ data class PollWithVotes(
     val createdBy: String,
     val question: String,
     val multiSelect: Boolean,
+    // "SIMPLE" | "RANKED" — server hint for ballot shape.
+    val kind: String = "SIMPLE",
+    // For RANKED polls the server computes the IRV winner; SIMPLE
+    // polls leave this null (most-votes wins via voteCount sort).
+    val winnerOptionId: String? = null,
     val closedAt: String? = null,
     val createdAt: String? = null,
     val options: List<PollOptionWithVotes>

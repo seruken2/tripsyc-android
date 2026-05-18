@@ -385,7 +385,7 @@ interface ApiService {
     suspend fun createPoll(@Body body: Map<String, Any>): Poll
 
     @PATCH("api/polls")
-    suspend fun votePoll(@Body body: Map<String, String>): Response<Unit>
+    suspend fun votePoll(@Body body: Map<String, Any?>): Response<Unit>
 
     @HTTP(method = "DELETE", path = "api/polls", hasBody = true)
     suspend fun closePoll(@Body body: Map<String, String>): Response<Unit>

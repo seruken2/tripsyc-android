@@ -81,6 +81,20 @@ fun PollsScreen(tripId: String, currentUser: User?) {
                             } catch (_: Exception) {}
                         }
                     },
+                    onRankVote = { optionId, rank ->
+                        scope.launch {
+                            try {
+                                ApiClient.apiService.votePoll(
+                                    mapOf(
+                                        "pollId" to poll.id,
+                                        "optionId" to optionId,
+                                        "rank" to rank
+                                    )
+                                )
+                                load()
+                            } catch (_: Exception) {}
+                        }
+                    },
                     onClose = {
                         scope.launch {
                             try {
@@ -104,15 +118,27 @@ private fun PollCard(
     poll: PollWithVotes,
     currentUserId: String?,
     onVote: (String) -> Unit,
+    onRankVote: (String, Int) -> Unit = { _, _ -> },
     onClose: () -> Unit
 ) {
     val isClosed = poll.closedAt != null
+    val isRanked = poll.kind == "RANKED"
     val totalVotes = poll.options.sumOf { it.voteCount }
 
     Surface(shape = RoundedCornerShape(16.dp), color = CardBackground, shadowElevation = 2.dp) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(poll.question, fontWeight = FontWeight.SemiBold, color = Chalk900, modifier = Modifier.weight(1f))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(poll.question, fontWeight = FontWeight.SemiBold, color = Chalk900)
+                    if (isRanked) {
+                        Text(
+                            "Ranked-choice · tap numbers to order your picks",
+                            color = Dusk,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
                 if (isClosed) {
                     Surface(shape = RoundedCornerShape(6.dp), color = Chalk200) {
                         Text("Closed", color = Chalk500, fontSize = 10.sp, fontWeight = FontWeight.Bold,
@@ -123,6 +149,7 @@ private fun PollCard(
 
             poll.options.forEach { option ->
                 val pct = if (totalVotes > 0) option.voteCount.toFloat() / totalVotes else 0f
+                val isWinner = poll.winnerOptionId == option.id
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -130,26 +157,67 @@ private fun PollCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (!isClosed) {
+                            if (isRanked && !isClosed) {
+                                // Numbered rank chips 1..N; tap a rank to
+                                // assign this option that position.
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    val maxRank = poll.options.size
+                                    for (n in 1..maxRank) {
+                                        val isSelected = option.myRank == n
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (isSelected) Dusk else Chalk100,
+                                            onClick = { onRankVote(option.id, n) },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    n.toString(),
+                                                    color = if (isSelected) Color.White else Chalk700,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if (!isClosed) {
                                 RadioButton(
                                     selected = option.votedByMe,
                                     onClick = { onVote(option.id) },
                                     colors = RadioButtonDefaults.colors(selectedColor = Coral)
                                 )
                             } else {
-                                if (option.votedByMe) {
+                                if (option.votedByMe || isWinner) {
                                     Text("✓", color = Coral, fontWeight = FontWeight.Bold)
                                     Spacer(modifier = Modifier.width(8.dp))
                                 }
                             }
                             Text(option.text, color = Chalk900, fontSize = 14.sp)
+                            if (isWinner) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Gold.copy(alpha = 0.20f)
+                                ) {
+                                    Text(
+                                        "Winner",
+                                        color = Gold,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                         }
+                        // For ranked polls we surface raw vote counts of
+                        // "first-place" votes; the IRV winner is the gold
+                        // tag, so the count column is informational.
                         Text("${option.voteCount}", color = Chalk500, fontSize = 13.sp)
                     }
                     LinearProgressIndicator(
                         progress = pct,
                         modifier = Modifier.fillMaxWidth().height(4.dp),
-                        color = Coral,
+                        color = if (isWinner) Gold else Coral,
                         trackColor = Chalk200
                     )
                 }
@@ -172,6 +240,7 @@ private fun CreatePollSheet(tripId: String, onDismiss: () -> Unit, onCreated: ()
     var options by remember { mutableStateOf(listOf("", "")) }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var rankedMode by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Chalk50) {
         Column(
@@ -203,6 +272,37 @@ private fun CreatePollSheet(tripId: String, onDismiss: () -> Unit, onCreated: ()
             if (options.size < 6) {
                 TextButton(onClick = { options = options + "" }) { Text("+ Add option", color = Coral) }
             }
+
+            // Ranked-choice toggle. Server interprets kind=RANKED as
+            // an IRV-style ballot where each voter orders the options;
+            // SIMPLE just counts votes.
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Dusk.copy(alpha = 0.06f),
+                onClick = { rankedMode = !rankedMode }
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Switch(
+                        checked = rankedMode,
+                        onCheckedChange = { rankedMode = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Dusk)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Ranked-choice", color = Chalk900, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (rankedMode) "Voters order all options; winner = instant runoff."
+                            else "Voters pick one option; winner = most votes.",
+                            color = Chalk500,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+
             if (error != null) Text(text = error!!, color = Danger, fontSize = 13.sp)
             Button(
                 onClick = {
@@ -212,7 +312,13 @@ private fun CreatePollSheet(tripId: String, onDismiss: () -> Unit, onCreated: ()
                         isLoading = true
                         try {
                             ApiClient.apiService.createPoll(
-                                mapOf("tripId" to tripId, "question" to question.trim(), "options" to validOptions, "multiSelect" to false)
+                                mapOf(
+                                    "tripId" to tripId,
+                                    "question" to question.trim(),
+                                    "options" to validOptions,
+                                    "multiSelect" to false,
+                                    "kind" to if (rankedMode) "RANKED" else "SIMPLE"
+                                )
                             )
                             onCreated(); onDismiss()
                         } catch (e: Exception) { error = e.message }

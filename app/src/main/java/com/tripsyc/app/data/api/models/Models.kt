@@ -606,6 +606,8 @@ data class PollVote(
     val id: String,
     val pollOptionId: String,
     val userId: String,
+    // Ranked-choice ballot order — null on SIMPLE polls.
+    val rank: Int? = null,
     val createdAt: String? = null
 )
 
@@ -614,7 +616,10 @@ data class PollOption(
     val pollId: String,
     val text: String,
     val createdAt: String? = null,
-    val votes: List<PollVote>? = null
+    val votes: List<PollVote>? = null,
+    // Server-rendered current rank for the viewer on ranked polls
+    // (null when the viewer hasn't ranked this option).
+    val myRank: Int? = null
 )
 
 data class Poll(
@@ -623,6 +628,10 @@ data class Poll(
     val createdBy: String,
     val question: String,
     val multiSelect: Boolean = false,
+    // "SIMPLE" | "RANKED" — controls ballot shape on the wire and the
+    // voter UI. Server enforces; client just chooses the right view.
+    val kind: String = "SIMPLE",
+    val winnerOptionId: String? = null,
     val closedAt: String? = null,
     val createdAt: String? = null,
     val options: List<PollOption>? = null
