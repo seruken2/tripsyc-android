@@ -71,6 +71,15 @@ fun TripDetailScreen(
     var selectedMoreTab by remember { mutableStateOf<MoreTab?>(null) }
     val scope = rememberCoroutineScope()
 
+    // Cross-screen settings broadcast. Settings save emits the new trip
+    // shape here; this screen swaps it into freshTrip so the nav title,
+    // hero, and lock cards re-render without a manual reload.
+    LaunchedEffect(trip.id) {
+        com.tripsyc.app.data.TripEventBus.tripUpdates.collect { updated ->
+            if (updated.id == trip.id) freshTrip = updated
+        }
+    }
+
     val dateLock = freshTrip.locks?.firstOrNull { it.lockType == LockType.DATE }
     val destLock = freshTrip.locks?.firstOrNull { it.lockType == LockType.DESTINATION }
     val isOrganizer = freshTrip.members?.firstOrNull { it.userId == currentUser?.id }

@@ -90,10 +90,14 @@ fun TripSettingsScreen(trip: Trip, currentUser: User?, onBack: () -> Unit) {
                             scope.launch {
                                 isSaving = true; error = null
                                 try {
-                                    ApiClient.apiService.updateTrip(
+                                    val updated = ApiClient.apiService.updateTrip(
                                         trip.id,
                                         mapOf("name" to tripName.trim(), "approxMonth" to approxMonth.trim().ifEmpty { null })
                                     )
+                                    // Notify other screens (TripDetail's
+                                    // nav title, hero, list rows) so the
+                                    // new name shows up without a refetch.
+                                    com.tripsyc.app.data.TripEventBus.emit(updated)
                                 } catch (e: Exception) { error = e.message ?: "Failed to save" }
                                 isSaving = false
                             }
