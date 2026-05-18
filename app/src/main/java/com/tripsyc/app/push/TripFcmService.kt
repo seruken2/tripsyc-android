@@ -63,7 +63,8 @@ class TripFcmService : FirebaseMessagingService() {
             title = title,
             body = body,
             tripId = tripId,
-            inviteId = inviteId.takeIf { type == "invite" }
+            inviteId = inviteId.takeIf { type == "invite" },
+            isChat = type == "chat"
         )
     }
 
@@ -71,7 +72,8 @@ class TripFcmService : FirebaseMessagingService() {
         title: String,
         body: String,
         tripId: String?,
-        inviteId: String? = null
+        inviteId: String? = null,
+        isChat: Boolean = false
     ) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -96,6 +98,30 @@ class TripFcmService : FirebaseMessagingService() {
             .setContentText(body)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+
+        // Inline reply on chat notifications. Long-press in newer
+        // launchers exposes the RemoteInput inline. Mirrors iOS chat
+        // notification category.
+        if (isChat && tripId != null) {
+            val replyIntent = Intent(this, ChatReplyReceiver::class.java).apply {
+                action = ChatReplyReceiver.ACTION_REPLY
+                putExtra(ChatReplyReceiver.EXTRA_TRIP_ID, tripId)
+                putExtra(ChatReplyReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+            }
+            val replyPending = PendingIntent.getBroadcast(
+                this, notificationId * 4, replyIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            )
+            val remoteInput = androidx.core.app.RemoteInput.Builder(ChatReplyReceiver.KEY_REPLY_TEXT)
+                .setLabel("Reply")
+                .build()
+            val replyAction = androidx.core.app.NotificationCompat.Action.Builder(
+                0, "Reply", replyPending
+            ).addRemoteInput(remoteInput)
+                .setAllowGeneratedReplies(true)
+                .build()
+            builder.addAction(replyAction)
+        }
 
         // Inline Accept / Decline buttons on invite notifications —
         // matches the iOS notification category. Receiver fires the

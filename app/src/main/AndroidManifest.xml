@@ -74,6 +74,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- Chat inline reply receiver. -->
+        <receiver
+            android:name=".push.ChatReplyReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.tripsyc.app.CHAT_REPLY" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
