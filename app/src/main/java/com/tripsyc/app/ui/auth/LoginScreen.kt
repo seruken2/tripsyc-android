@@ -103,24 +103,16 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.padding(horizontal = 24.dp)
             ) {
-                // App icon
-                Image(
-                    painter = painterResource(R.drawable.tripsyc_icon),
-                    contentDescription = "Tripsyc",
-                    modifier = Modifier
-                        .size(76.dp)
-                        .shadow(elevation = 20.dp, shape = RoundedCornerShape(18.dp))
-                        .clip(RoundedCornerShape(18.dp)),
-                    contentScale = ContentScale.Fit
-                )
-
-                // Wordmark
+                // Wordmark only — matches iOS LoginView which shows the
+                // wordmark logo at 260pt wide as the sole identity mark.
+                // The app icon was a duplicate brand surface stacked
+                // above the wordmark; users saw "Tripsyc" twice.
                 Image(
                     painter = painterResource(R.drawable.tripsyc_logo),
                     contentDescription = "Tripsyc",
                     modifier = Modifier
-                        .height(32.dp)
-                        .widthIn(max = 148.dp),
+                        .height(56.dp)
+                        .widthIn(max = 260.dp),
                     colorFilter = ColorFilter.tint(Color.White),
                     contentScale = ContentScale.Fit
                 )
