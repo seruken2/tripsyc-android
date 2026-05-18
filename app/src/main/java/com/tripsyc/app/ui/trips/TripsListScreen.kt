@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.PushPin
@@ -64,6 +65,8 @@ fun TripsListScreen(
     var celebrationTrip by remember { mutableStateOf<Trip?>(null) }
     var celebrationIsFirst by remember { mutableStateOf(false) }
     var showSampleTrip by remember { mutableStateOf(false) }
+    var showHelp by remember { mutableStateOf(false) }
+    var welcomeReplayPending by remember { mutableStateOf(false) }
 
     if (celebrationTrip != null) {
         com.tripsyc.app.ui.onboarding.TripCreatedScreen(
@@ -132,6 +135,14 @@ fun TripsListScreen(
                     }
                 },
                 actions = {
+                    // Help button
+                    IconButton(onClick = { showHelp = true }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.HelpOutline,
+                            contentDescription = "Help",
+                            tint = Chalk500
+                        )
+                    }
                     // Sort button
                     Box {
                         IconButton(onClick = { showSortMenu = true }) {
@@ -449,6 +460,33 @@ fun TripsListScreen(
                 celebrationTrip = trip
             }
         )
+    }
+
+    if (showHelp) {
+        com.tripsyc.app.ui.onboarding.HelpSheet(
+            onDismiss = { showHelp = false },
+            onReplayWelcome = {
+                showHelp = false
+                welcomeReplayPending = true
+            },
+            onShowSampleTrip = {
+                showHelp = false
+                showSampleTrip = true
+            }
+        )
+    }
+
+    // When the user taps Replay Tutorial we present the welcome
+    // carousel inline (we already cleared the seen flag in HelpSheet).
+    if (welcomeReplayPending) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { welcomeReplayPending = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            com.tripsyc.app.ui.onboarding.WelcomeScreen(
+                onGetStarted = { welcomeReplayPending = false }
+            )
+        }
     }
 
     if (showSampleTrip) {
