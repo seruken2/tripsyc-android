@@ -64,6 +64,9 @@ fun ChatScreen(
     var editingMessage by remember { mutableStateOf<ChatMessageWithUser?>(null) }
     var reportTarget by remember { mutableStateOf<ChatMessageWithUser?>(null) }
     var lastReportToast by remember { mutableStateOf<String?>(null) }
+    // Read receipts — refetched on each new message arrival so the
+    // "Read by …" row stays accurate after the user sends.
+    var readReceipts by remember { mutableStateOf<List<com.tripsyc.app.data.api.models.ReadReceipt>>(emptyList()) }
     // Pending image attachment for the message currently being typed.
     // We compress on the IO thread and stash the resulting data URI; on
     // send it rides along in the POST body as `imageUrl`.
@@ -102,6 +105,11 @@ fun ChatScreen(
                 messages = if (cursor == null) response.messages
                 else response.messages + messages
                 nextCursor = response.nextCursor
+            } catch (_: Exception) {}
+            // Refresh the "Read by …" row alongside the message list.
+            // Failure is silent — the row just stays empty.
+            try {
+                readReceipts = ApiClient.apiService.getReadReceipts(tripId).receipts
             } catch (_: Exception) {}
             isLoading = false
         }
@@ -235,6 +243,64 @@ fun ChatScreen(
                     color = Chalk400,
                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                 )
+            }
+        }
+
+        // ── Read receipts row ─────────────────────────────────────────
+        // "Read" + mini avatars of who's seen the latest message. Mirrors
+        // iOS — global per-chat row (not per-bubble) so the bottom of
+        // the conversation always shows the freshest read state.
+        val latestMine = messages.lastOrNull { it.userId == currentUser?.id }
+        val latestCreatedAtMs = latestMine?.createdAt
+            ?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() }
+            ?: Long.MAX_VALUE
+        val readers = readReceipts.filter { r ->
+            r.userId != currentUser?.id &&
+                latestMine != null &&
+                runCatching { java.time.Instant.parse(r.readAt).toEpochMilli() >= latestCreatedAtMs }.getOrDefault(false)
+        }
+        if (readers.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Read",
+                    color = Chalk400,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(-4.dp)) {
+                    readers.take(4).forEach { r ->
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(Coral.copy(alpha = 0.20f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (!r.user.avatarUrl.isNullOrEmpty()) {
+                                coil.compose.AsyncImage(
+                                    model = r.user.avatarUrl,
+                                    contentDescription = r.user.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Text(
+                                    r.user.name?.firstOrNull()?.uppercase() ?: "?",
+                                    color = Coral,
+                                    fontSize = 7.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
