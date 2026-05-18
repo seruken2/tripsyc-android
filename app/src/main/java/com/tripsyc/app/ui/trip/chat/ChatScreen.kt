@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Reply
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -67,6 +68,9 @@ fun ChatScreen(
     // Read receipts — refetched on each new message arrival so the
     // "Read by …" row stays accurate after the user sends.
     var readReceipts by remember { mutableStateOf<List<com.tripsyc.app.data.api.models.ReadReceipt>>(emptyList()) }
+    // Client-side search. Filters the loaded messages list by case-
+    // insensitive substring; no server round-trip.
+    var searchQuery by remember { mutableStateOf("") }
     // Pending image attachment for the message currently being typed.
     // We compress on the IO thread and stash the resulting data URI; on
     // send it rides along in the POST body as `imageUrl`.
@@ -167,11 +171,73 @@ fun ChatScreen(
         }
     }
 
+    val filteredMessages = if (searchQuery.isBlank()) messages
+    else messages.filter { it.text.contains(searchQuery.trim(), ignoreCase = true) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Chalk50)
     ) {
+        // ── Search bar ───────────────────────────────────────────
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Chalk200)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    androidx.compose.material.icons.Icons.Default.Search,
+                    contentDescription = null,
+                    tint = Chalk400,
+                    modifier = Modifier.size(14.dp)
+                )
+                androidx.compose.foundation.text.BasicTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        color = Chalk900,
+                        fontSize = 14.sp
+                    ),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Coral),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { inner ->
+                        Box {
+                            if (searchQuery.isEmpty()) {
+                                Text(
+                                    "Search messages...",
+                                    color = Chalk400,
+                                    fontSize = 14.sp
+                                )
+                            }
+                            inner()
+                        }
+                    }
+                )
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(
+                        onClick = { searchQuery = "" },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Clear search",
+                            tint = Chalk400,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         // ── Messages list ──────────────────────────────────────────────
         Box(modifier = Modifier.weight(1f)) {
             when {
@@ -180,6 +246,11 @@ fun ChatScreen(
                     icon = "💬",
                     title = "No messages yet",
                     message = "Be the first to say something!"
+                )
+                searchQuery.isNotBlank() && filteredMessages.isEmpty() -> EmptyState(
+                    icon = "🔍",
+                    title = "No matches",
+                    message = "No messages match your search"
                 )
                 else -> {
                     LazyColumn(
@@ -205,7 +276,7 @@ fun ChatScreen(
                             }
                         }
 
-                        items(messages, key = { it.id }) { message ->
+                        items(filteredMessages, key = { it.id }) { message ->
                             val isMe = message.userId == currentUser?.id
                             MessageBubble(
                                 message = message,
