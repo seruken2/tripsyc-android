@@ -213,6 +213,42 @@ data class AcceptMajorityResponse(
     val draftId: String? = null
 )
 
+data class AIItineraryAuditFlag(
+    val kind: String,
+    val severity: String,
+    val dayOffset: Int? = null,
+    val title: String,
+    val detail: String,
+    val fix: String? = null
+)
+
+data class AIItineraryAuditDay(
+    val dayOffset: Int,
+    val date: String,
+    val dayOfWeek: String,
+    val itemCount: Int = 0,
+    val hasRestaurant: Boolean = false,
+    val hasActivity: Boolean = false,
+    val totalCostUsd: Int = 0,
+    val estimatedWalkMiles: Double = 0.0,
+    val isHoliday: Boolean = false,
+    val holidayName: String? = null
+)
+
+data class AIItineraryAuditResponse(
+    val draftId: String? = null,
+    val memberCount: Int? = null,
+    val days: List<AIItineraryAuditDay> = emptyList(),
+    val flags: List<AIItineraryAuditFlag> = emptyList()
+)
+
+data class AIItineraryRebalanceResponse(
+    val dayOffset: Int = 0,
+    val itemsKept: Int = 0,
+    val itemsReplaced: Int = 0,
+    val newItems: List<AIItineraryDraftItem> = emptyList()
+)
+
 data class TripSummaryResponse(
     val headline: String,
     val narrative: String,

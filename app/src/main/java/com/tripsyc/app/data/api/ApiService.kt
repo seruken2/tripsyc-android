@@ -80,6 +80,17 @@ interface ApiService {
         @Body body: Map<String, String>
     ): AcceptMajorityResponse
 
+    @GET("api/ai/itinerary-draft/audit")
+    suspend fun auditSmartItinerary(
+        @Query("tripId") tripId: String,
+        @Query("draftId") draftId: String? = null
+    ): AIItineraryAuditResponse
+
+    @POST("api/ai/itinerary-draft/rebalance")
+    suspend fun rebalanceSmartItinerary(
+        @Body body: Map<String, Any?>
+    ): AIItineraryRebalanceResponse
+
     @POST("api/ai/trip-summary")
     suspend fun generateTripSummary(
         @Body body: Map<String, String>

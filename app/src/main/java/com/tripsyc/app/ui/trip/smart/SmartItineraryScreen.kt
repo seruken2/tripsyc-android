@@ -13,8 +13,10 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.*
@@ -51,6 +53,7 @@ fun SmartItineraryScreen(
     onBack: () -> Unit
 ) {
     var drafts by remember { mutableStateOf<List<AIItineraryDraft>>(emptyList()) }
+    var audit by remember { mutableStateOf<com.tripsyc.app.data.api.models.AIItineraryAuditResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isGenerating by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -63,6 +66,8 @@ fun SmartItineraryScreen(
         } catch (e: Exception) {
             error = e.message ?: "Couldn't load itinerary drafts"
         }
+        // Audit is informational — failures don't gate the screen.
+        audit = runCatching { ApiClient.apiService.auditSmartItinerary(tripId) }.getOrNull()
         isLoading = false
     }
 
@@ -193,6 +198,76 @@ fun SmartItineraryScreen(
                 }
             }
 
+            // Audit panel — logistical warnings (long walks, missing
+            // meals, holiday closures, budget overshoot). Only shows
+            // when at least one flag is non-empty.
+            val auditFlags = audit?.flags.orEmpty()
+            if (auditFlags.isNotEmpty()) {
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = CardBackground,
+                        shadowElevation = 1.dp
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    androidx.compose.material.icons.Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = Coral,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    "Heads-ups (${auditFlags.size})",
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Chalk900
+                                )
+                            }
+                            auditFlags.forEach { flag ->
+                                val accent = when (flag.severity.lowercase()) {
+                                    "high" -> Danger
+                                    "medium" -> Coral
+                                    else -> Gold
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = accent.copy(alpha = 0.08f)
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            if (flag.dayOffset != null) {
+                                                Text(
+                                                    "Day ${flag.dayOffset + 1}",
+                                                    color = accent,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                            Text(
+                                                flag.title,
+                                                color = Chalk900,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                        Text(flag.detail, color = Chalk700, fontSize = 12.sp)
+                                        flag.fix?.let { fix ->
+                                            Text("Fix: $fix", color = Chalk500, fontSize = 11.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if (drafts.isEmpty()) {
                 item {
                     Surface(shape = RoundedCornerShape(14.dp), color = Chalk100) {
@@ -228,6 +303,22 @@ fun SmartItineraryScreen(
                                     reload()
                                 } catch (e: Exception) {
                                     error = e.message ?: "Couldn't accept majority"
+                                }
+                            }
+                        },
+                        onRebalance = {
+                            scope.launch {
+                                try {
+                                    ApiClient.apiService.rebalanceSmartItinerary(
+                                        mapOf(
+                                            "tripId" to tripId,
+                                            "draftId" to draft.id,
+                                            "mode" to "REPLACE_DOWNVOTED"
+                                        )
+                                    )
+                                    reload()
+                                } catch (e: Exception) {
+                                    error = e.message ?: "Couldn't rebalance"
                                 }
                             }
                         }
@@ -269,34 +360,50 @@ private fun DraftHeader(
     tone: String?,
     itemCount: Int,
     isOrganizer: Boolean,
-    onAcceptMajority: () -> Unit
+    onAcceptMajority: () -> Unit,
+    onRebalance: () -> Unit = {}
 ) {
     Surface(shape = RoundedCornerShape(14.dp), color = CardBackground, shadowElevation = 2.dp) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.Bold, color = Chalk900, fontSize = 16.sp)
-                Text(
-                    listOfNotNull(
-                        tone?.let { "Tone: $it" },
-                        "$itemCount item${if (itemCount == 1) "" else "s"}"
-                    ).joinToString(" · "),
-                    color = Chalk500,
-                    fontSize = 12.sp
-                )
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(title, fontWeight = FontWeight.Bold, color = Chalk900, fontSize = 16.sp)
+                    Text(
+                        listOfNotNull(
+                            tone?.let { "Tone: $it" },
+                            "$itemCount item${if (itemCount == 1) "" else "s"}"
+                        ).joinToString(" · "),
+                        color = Chalk500,
+                        fontSize = 12.sp
+                    )
+                }
+                if (isOrganizer && itemCount > 0) {
+                    Button(
+                        onClick = onAcceptMajority,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Coral),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Accept majority", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
             }
+
+            // Rebalance — organizer-only secondary action. Replaces
+            // down-voted items in the existing draft with fresh
+            // suggestions; keeps the up-voted ones alone.
             if (isOrganizer && itemCount > 0) {
-                Button(
-                    onClick = onAcceptMajority,
+                OutlinedButton(
+                    onClick = onRebalance,
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Coral),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Gold)
                 ) {
-                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Accept majority", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Icon(androidx.compose.material.icons.Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Rebalance down-voted", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
