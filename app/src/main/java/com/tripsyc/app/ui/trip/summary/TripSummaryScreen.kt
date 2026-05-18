@@ -84,7 +84,7 @@ fun TripSummaryScreen(trip: Trip) {
                 accent = Sage,
                 icon = Icons.Default.EventAvailable,
                 label = "DATE",
-                primary = dateLock.lockedValue
+                primary = com.tripsyc.app.ui.common.formatLockedDateRange(dateLock.lockedValue)
             )
         }
 

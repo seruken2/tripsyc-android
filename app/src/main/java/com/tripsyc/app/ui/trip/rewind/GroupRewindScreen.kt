@@ -94,7 +94,17 @@ private fun Content(data: GroupRewindResponse) {
                         listOfNotNull(
                             data.trip.destination,
                             data.trip.country,
-                            data.trip.startDate?.let { "$it → ${data.trip.endDate ?: ""}" }
+                            // Pretty range when both ends are present;
+                            // otherwise the formatted single date so
+                            // the header never shows raw ISO.
+                            data.trip.startDate?.let { start ->
+                                val end = data.trip.endDate
+                                if (end != null) {
+                                    com.tripsyc.app.ui.common.formatLockedDateRange("$start to $end")
+                                } else {
+                                    com.tripsyc.app.ui.common.formatIsoDate(start)
+                                }
+                            }
                         ).joinToString(" · "),
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 13.sp

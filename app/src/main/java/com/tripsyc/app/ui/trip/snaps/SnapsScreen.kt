@@ -163,7 +163,13 @@ fun SnapsScreen(tripId: String, currentUserId: String?) {
         Spacer(modifier = Modifier.height(12.dp))
 
         // ── Recent snaps timeline ───────────────────────────────
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // weight(1f) — without it the LazyColumn collapsed to zero
+        // height inside the surrounding fillMaxSize Column, so the
+        // timeline rendered blank below the author rings.
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             authors.forEach { author ->
                 items(author.snaps, key = { it.id }) { snap ->
                     SnapPreviewRow(

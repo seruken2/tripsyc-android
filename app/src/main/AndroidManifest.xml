@@ -29,8 +29,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Join link: tripsyc://join/{tripId}?code=X -->
-            <intent-filter android:autoVerify="true">
+            <!-- Join link: tripsyc://join/{tripId}?code=X
+                 No autoVerify — Android App Links auto-verify only
+                 applies to http/https schemes via Digital Asset Links;
+                 a tripsyc:// custom scheme is always handled by the
+                 app since nobody else registered it. -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />

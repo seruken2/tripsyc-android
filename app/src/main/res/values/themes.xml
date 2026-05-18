@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base Tripsyc theme — no action bar, chalk50 status bar -->
     <style name="Theme.Tripsyc" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">@color/chalk50</item>
         <item name="android:navigationBarColor">@color/chalk50</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
+        <!-- windowLightNavigationBar landed in API 27. Our minSdk is
+             26 — older devices silently ignore the attribute, so the
+             lint NewApi warning is a false alarm; tools:targetApi
+             tells lint we know. -->
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
         <item name="android:colorBackground">@color/chalk50</item>
     </style>
 </resources>

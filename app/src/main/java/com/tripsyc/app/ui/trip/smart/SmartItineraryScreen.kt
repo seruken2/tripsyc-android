@@ -75,35 +75,25 @@ fun SmartItineraryScreen(
         reload()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Smart Plan", fontWeight = FontWeight.Bold, color = Chalk900) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Chalk700)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Chalk50)
-            )
-        },
-        containerColor = Chalk50
-    ) { padding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier.padding(padding).fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Coral)
-            }
-            return@Scaffold
-        }
-
-        LazyColumn(
-            modifier = Modifier.padding(padding).fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+    // No inner Scaffold — MoreTabScreen already wraps this screen in
+    // its own Scaffold + TopAppBar (title "Smart Plan", back arrow
+    // routes to MoreTab grid). Adding our own would stack two top
+    // bars and double back buttons.
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
+            CircularProgressIndicator(color = Coral)
+        }
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
             // Tone picker + generate button — only organizers can mint
             // a fresh draft (and burn server tokens) since drafts are
             // expensive and visible to everyone.
@@ -352,7 +342,6 @@ fun SmartItineraryScreen(
             }
         }
     }
-}
 
 @Composable
 private fun DraftHeader(

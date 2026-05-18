@@ -193,7 +193,7 @@ fun DatesScreen(
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Success)
                         Column {
                             Text("Dates Locked!", fontWeight = FontWeight.SemiBold, color = Chalk900)
-                            Text(formatLockedDateRange(existingLock.lockedValue), color = Chalk500, fontSize = 13.sp)
+                            Text(com.tripsyc.app.ui.common.formatLockedDateRange(existingLock.lockedValue), color = Chalk500, fontSize = 13.sp)
                         }
                     }
                 }
@@ -471,23 +471,3 @@ private fun LegendItem(color: Color, label: String) {
     }
 }
 
-/// Same iOS formatLockedDate treatment used on Overview's lock card —
-/// turns the raw "yyyy-MM-dd to yyyy-MM-dd" payload into a readable
-/// "MMM d – MMM d, yyyy" range.
-private fun formatLockedDateRange(value: String): String {
-    val parser = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    val display = java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US)
-    val parts = value.split(" to ")
-    return when (parts.size) {
-        2 -> {
-            val s = runCatching { java.time.LocalDate.parse(parts[0].trim(), parser) }.getOrNull()
-            val e = runCatching { java.time.LocalDate.parse(parts[1].trim(), parser) }.getOrNull()
-            if (s != null && e != null) "${display.format(s)} – ${display.format(e)}, ${e.year}" else value
-        }
-        1 -> {
-            val s = runCatching { java.time.LocalDate.parse(parts[0].trim(), parser) }.getOrNull()
-            if (s != null) "${display.format(s)}, ${s.year}" else value
-        }
-        else -> value
-    }
-}
