@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material.icons.filled.Send
@@ -59,6 +60,7 @@ fun ChatScreen(
     var nextCursor by remember { mutableStateOf<String?>(null) }
     var actionTargetMessage by remember { mutableStateOf<ChatMessageWithUser?>(null) }
     var replyingTo by remember { mutableStateOf<ChatMessageWithUser?>(null) }
+    var editingMessage by remember { mutableStateOf<ChatMessageWithUser?>(null) }
     val clipboard = LocalClipboardManager.current
     var typingNames by remember { mutableStateOf<List<String>>(emptyList()) }
     val scope = rememberCoroutineScope()
@@ -417,6 +419,27 @@ fun ChatScreen(
                     }
                 )
 
+                // Edit — only author within 30-min window, no image.
+                // Server enforces the same constraint; the UI just
+                // hides the affordance once it can't take.
+                val ageMs = targetMsg.createdAt
+                    ?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() }
+                    ?.let { System.currentTimeMillis() - it }
+                    ?: Long.MAX_VALUE
+                val canEdit = isAuthor &&
+                    targetMsg.imageUrl.isNullOrEmpty() &&
+                    ageMs < 30L * 60 * 1000
+                if (canEdit) {
+                    ActionRow(
+                        icon = Icons.Default.Edit,
+                        label = "Edit",
+                        onClick = {
+                            editingMessage = targetMsg
+                            actionTargetMessage = null
+                        }
+                    )
+                }
+
                 ActionRow(
                     icon = Icons.Default.ContentCopy,
                     label = "Copy text",
@@ -474,6 +497,85 @@ fun ChatScreen(
             }
         }
     }
+
+    // Edit message dialog — mirrors the iOS EditMessageSheet: same
+    // title, character count, Cancel / Save labels, 2000-char cap.
+    editingMessage?.let { target ->
+        EditMessageDialog(
+            initialText = target.text,
+            onCancel = { editingMessage = null },
+            onSave = { newText ->
+                val original = target
+                editingMessage = null
+                scope.launch {
+                    try {
+                        ApiClient.apiService.patchMessage(
+                            mapOf("messageId" to original.id, "text" to newText)
+                        )
+                        // Optimistic local update so the bubble reflows
+                        // before the next refetch.
+                        messages = messages.map {
+                            if (it.id == original.id) it.copy(
+                                text = newText,
+                                editedAt = java.time.Instant.now().toString()
+                            ) else it
+                        }
+                    } catch (_: Exception) {}
+                }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditMessageDialog(
+    initialText: String,
+    onCancel: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var text by remember { mutableStateOf(initialText) }
+    val trimmed = text.trim()
+    val canSave = trimmed.isNotEmpty() && trimmed != initialText.trim()
+
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text("Edit message") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { if (it.length <= 2000) text = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 6,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Coral,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
+                )
+                Text(
+                    "${text.length}/2000",
+                    color = Chalk500,
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(trimmed) },
+                enabled = canSave,
+                colors = ButtonDefaults.buttonColors(containerColor = Coral)
+            ) { Text("Save", color = Color.White) }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onCancel) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
