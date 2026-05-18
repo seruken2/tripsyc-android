@@ -61,7 +61,7 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
         WelcomePage(
             icon = Icons.Default.Sensors,
             title = "Live, Everywhere",
-            body = "Votes, chat, and expenses sync in real time across web and mobile. Plan together, even when apart.",
+            body = "Votes, chat, and expenses sync in real time across web and Android. See who else is looking at the trip, right now.",
             color = Gold
         )
     )

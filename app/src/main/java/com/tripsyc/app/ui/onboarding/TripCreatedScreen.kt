@@ -87,9 +87,9 @@ fun TripCreatedScreen(
                 )
                 Text(
                     text = if (isFirstTrip)
-                        "\"${trip.name}\" is live. Get your crew on board and pencil in something to do."
+                        "Two more things make a trip feel real:"
                     else
-                        "\"${trip.name}\" is live. Pick a next step or jump straight in.",
+                        "Trip created. Time to build it out.",
                     fontSize = 15.sp,
                     color = Chalk500,
                     textAlign = TextAlign.Center
@@ -111,8 +111,8 @@ fun TripCreatedScreen(
                 NextStepRow(
                     number = 2,
                     icon = Icons.Default.ListAlt,
-                    title = "Drop in a first activity",
-                    subtitle = "Even a placeholder helps the group rally.",
+                    title = "Add the first activity",
+                    subtitle = "A dinner, a flight, anything to anchor the trip.",
                     accent = Dusk,
                     onClick = onAddActivity
                 )
@@ -124,7 +124,7 @@ fun TripCreatedScreen(
                 onClick = onDone,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("I'll do this later", color = Chalk500, fontWeight = FontWeight.SemiBold)
+                Text("Just open my trip", color = Chalk500, fontWeight = FontWeight.SemiBold)
             }
         }
 
