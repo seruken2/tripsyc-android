@@ -61,6 +61,7 @@ fun ProfileScreen(
     var avatarError by remember { mutableStateOf<String?>(null) }
     var showCrews by remember { mutableStateOf(false) }
     var showRewind by remember { mutableStateOf(false) }
+    var showDeeperFit by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val avatarPicker = rememberLauncherForActivityResult(
@@ -118,6 +119,36 @@ fun ProfileScreen(
 
     if (showRewind) {
         com.tripsyc.app.ui.rewind.RewindScreen(onBack = { showRewind = false })
+        return
+    }
+
+    if (showDeeperFit && profile != null) {
+        Box(modifier = modifier.fillMaxSize().background(Chalk50)) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                TextButton(
+                    onClick = { showDeeperFit = false },
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(
+                        androidx.compose.material.icons.Icons.Default.ArrowBack,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Back", color = Coral, fontWeight = FontWeight.SemiBold)
+                }
+                Text("Deeper Group Fit", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Chalk900)
+                DeeperFitCard(profile = profile!!) { updated ->
+                    profile = updated
+                    onUserUpdated(updated)
+                }
+            }
+        }
         return
     }
 
@@ -468,6 +499,43 @@ fun ProfileScreen(
                     Text("Crews", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 14.sp)
                     Text(
                         "Saved travel groups for one-tap invites",
+                        fontSize = 12.sp,
+                        color = Chalk500
+                    )
+                }
+                Icon(
+                    androidx.compose.material.icons.Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Chalk400
+                )
+            }
+        }
+
+        // Deeper Group Fit — 18 compatibility axes
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = CardBackground,
+            shadowElevation = 1.dp,
+            onClick = { showDeeperFit = true }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(Dusk.copy(alpha = 0.16f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🧬", fontSize = 14.sp)
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Deeper Group Fit", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 14.sp)
+                    Text(
+                        "18 compatibility axes that sharpen group fit",
                         fontSize = 12.sp,
                         color = Chalk500
                     )
