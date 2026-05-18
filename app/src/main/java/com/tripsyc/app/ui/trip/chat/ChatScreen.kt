@@ -61,10 +61,32 @@ fun ChatScreen(
     var actionTargetMessage by remember { mutableStateOf<ChatMessageWithUser?>(null) }
     var replyingTo by remember { mutableStateOf<ChatMessageWithUser?>(null) }
     var editingMessage by remember { mutableStateOf<ChatMessageWithUser?>(null) }
+    // Pending image attachment for the message currently being typed.
+    // We compress on the IO thread and stash the resulting data URI; on
+    // send it rides along in the POST body as `imageUrl`.
+    var pendingImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingImageDataUri by remember { mutableStateOf<String?>(null) }
     val clipboard = LocalClipboardManager.current
+    val chatContext = androidx.compose.ui.platform.LocalContext.current
     var typingNames by remember { mutableStateOf<List<String>>(emptyList()) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+
+    val chatImagePicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            pendingImageUri = uri
+            pendingImageDataUri = null
+            // Compress off-main, mirror iOS's 1024px / ~150KB cap so
+            // the server stores compact data URIs.
+            scope.launch {
+                pendingImageDataUri = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { encodeChatImage(chatContext, uri) }.getOrNull()
+                }
+            }
+        }
+    }
 
     fun loadMessages(cursor: String? = null) {
         scope.launch {
@@ -275,6 +297,56 @@ fun ChatScreen(
                         }
                     }
                 }
+
+                // Pending image preview — coil renders the URI before
+                // the compressed data URI is ready, so the user sees
+                // their attachment instantly.
+                pendingImageUri?.let { uri ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = Chalk100
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            coil.compose.AsyncImage(
+                                model = uri,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Image attached", color = Chalk900, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                Text(
+                                    if (pendingImageDataUri == null) "Compressing…" else "Ready to send",
+                                    color = Chalk500,
+                                    fontSize = 11.sp
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    pendingImageUri = null
+                                    pendingImageDataUri = null
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Remove image",
+                                    tint = Chalk500,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -284,7 +356,13 @@ fun ChatScreen(
             ) {
                 // Attachment button (matches iOS plus.circle.fill)
                 IconButton(
-                    onClick = { /* photo picker */ },
+                    onClick = {
+                        chatImagePicker.launch(
+                            androidx.activity.result.PickVisualMediaRequest(
+                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
+                    },
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
@@ -316,15 +394,20 @@ fun ChatScreen(
                     )
                 )
 
-                // Send button — coral when can send, chalk200 otherwise
-                val canSend = messageText.isNotBlank() && !isSending
+                // Send button — coral when can send, chalk200 otherwise.
+                // Sendable when either text is present OR an image
+                // attachment finished compressing.
+                val canSend = (messageText.isNotBlank() || pendingImageDataUri != null) && !isSending
                 IconButton(
                     onClick = {
                         if (!canSend) return@IconButton
                         val text = messageText.trim()
                         val replyId = replyingTo?.id
+                        val imageData = pendingImageDataUri
                         messageText = ""
                         replyingTo = null
+                        pendingImageUri = null
+                        pendingImageDataUri = null
                         scope.launch {
                             isSending = true
                             try {
@@ -332,6 +415,7 @@ fun ChatScreen(
                                     put("tripId", tripId)
                                     put("text", text)
                                     if (replyId != null) put("replyToId", replyId)
+                                    if (imageData != null) put("imageUrl", imageData)
                                 }
                                 val sent = ApiClient.apiService.sendMessage(body)
                                 messages = messages + sent
@@ -340,6 +424,7 @@ fun ChatScreen(
                                 }
                             } catch (_: Exception) {
                                 messageText = text
+                                pendingImageDataUri = imageData
                             }
                             isSending = false
                         }
@@ -809,4 +894,39 @@ private fun formatTime(isoString: String): String {
         val date = sdf.parse(isoString) ?: return ""
         SimpleDateFormat("HH:mm", Locale.US).format(date)
     } catch (_: Exception) { "" }
+}
+
+/// Compresses a picked image to a base64 JPEG data URI under ~150 KB
+/// at most 1024×1024. Mirrors the iOS ChatViewModel.setImage pipeline
+/// so server-side storage stays identical across platforms.
+private fun encodeChatImage(context: android.content.Context, uri: android.net.Uri): String {
+    val source = context.contentResolver.openInputStream(uri).use {
+        android.graphics.BitmapFactory.decodeStream(it)
+            ?: throw Exception("Couldn't decode image")
+    }
+    val maxDim = 1024
+    val scale = minOf(
+        maxDim.toFloat() / source.width,
+        maxDim.toFloat() / source.height,
+        1f
+    )
+    val target = if (scale < 1f) {
+        android.graphics.Bitmap.createScaledBitmap(
+            source,
+            (source.width * scale).toInt().coerceAtLeast(1),
+            (source.height * scale).toInt().coerceAtLeast(1),
+            true
+        )
+    } else source
+
+    var quality = 70
+    while (true) {
+        val out = java.io.ByteArrayOutputStream()
+        target.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, out)
+        if (out.size() <= 150_000 || quality <= 10) {
+            val encoded = android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP)
+            return "data:image/jpeg;base64,$encoded"
+        }
+        quality -= 15
+    }
 }
