@@ -418,6 +418,50 @@ data class RewindResponse(
     val trips: List<RewindTripRef> = emptyList()
 )
 
+// ─── Group Rewind ───────────────────────────────────────────────────────────
+
+data class GroupRewindTrip(
+    val id: String,
+    val name: String,
+    val createdAt: String? = null,
+    val startDate: String? = null,
+    val endDate: String? = null,
+    val destination: String? = null,
+    val country: String? = null
+)
+
+data class GroupRewindTotals(
+    val memberCount: Int = 0,
+    val nights: Int = 0,
+    val chatMessages: Int = 0,
+    val photos: Int = 0,
+    val expenseCount: Int = 0,
+    val totalSpendUsd: Int = 0
+)
+
+data class GroupRewindMember(
+    val userId: String,
+    val name: String,
+    val avatarUrl: String? = null
+)
+
+data class GroupRewindSuperlative(
+    val title: String,
+    val label: String,
+    val memberUserId: String,
+    val memberName: String,
+    val memberAvatar: String? = null,
+    val value: String
+)
+
+data class GroupRewindResponse(
+    val trip: GroupRewindTrip,
+    val totals: GroupRewindTotals = GroupRewindTotals(),
+    val members: List<GroupRewindMember> = emptyList(),
+    val superlatives: List<GroupRewindSuperlative> = emptyList(),
+    val destinationsConsidered: List<String> = emptyList()
+)
+
 // ─── DestinationEnvironment ─────────────────────────────────────────────────
 //
 // Any field may be null when the upstream Google API call fails or the

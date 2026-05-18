@@ -56,7 +56,7 @@ enum class TripTab(val label: String, val icon: ImageVector) {
 enum class MoreTab {
     Expenses, Notes, Packing, Photos, Itinerary, Polls,
     Responsibilities, Activity, Memories, Invite, Settings, Unlock,
-    Summary, GroupProfile, Guide, SmartItinerary, Snaps
+    Summary, GroupProfile, Guide, SmartItinerary, Snaps, GroupRewind
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -267,6 +267,7 @@ fun MoreMenuScreen(
         Triple(MoreTab.Snaps, Icons.Default.PhotoCamera, "Snaps"),
         Triple(MoreTab.Responsibilities, Icons.Default.CheckCircle, "Tasks"),
         Triple(MoreTab.Memories, Icons.Default.Favorite, "Memories"),
+        Triple(MoreTab.GroupRewind, Icons.Default.EmojiEvents, "Group Rewind"),
     )
     if (isFullyLocked) {
         baseItems += Triple(MoreTab.Summary, Icons.Default.Verified, "Trip Summary")
@@ -372,6 +373,7 @@ fun MoreTabScreen(
                             MoreTab.Guide -> "Trip Guide"
                             MoreTab.SmartItinerary -> "Smart Itinerary"
                             MoreTab.Snaps -> "Snaps"
+                            MoreTab.GroupRewind -> "Group Rewind"
                         },
                         fontWeight = FontWeight.Bold,
                         color = Chalk900
@@ -421,6 +423,9 @@ fun MoreTabScreen(
                 MoreTab.Snaps -> com.tripsyc.app.ui.trip.snaps.SnapsScreen(
                     tripId = trip.id,
                     currentUserId = currentUser?.id
+                )
+                MoreTab.GroupRewind -> com.tripsyc.app.ui.trip.rewind.GroupRewindScreen(
+                    tripId = trip.id
                 )
                 MoreTab.SmartItinerary -> {
                     val isOrganizer = trip.members?.firstOrNull { it.userId == currentUser?.id }
