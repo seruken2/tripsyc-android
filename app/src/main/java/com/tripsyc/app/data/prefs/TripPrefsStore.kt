@@ -17,6 +17,7 @@ object TripPrefsStore {
     private const val KEY_PINNED = "pinnedTrips"
     private const val KEY_ARCHIVED = "archivedTrips"
     private const val KEY_WELCOME_SEEN = "welcomeSeen"
+    private const val KEY_COACH_SEEN = "coachMarksSeen"
 
     private var prefs: SharedPreferences? = null
 
@@ -33,6 +34,12 @@ object TripPrefsStore {
 
     fun markWelcomeSeen() {
         prefs?.edit()?.putBoolean(KEY_WELCOME_SEEN, true)?.apply()
+    }
+
+    fun coachMarksSeen(): Boolean = prefs?.getBoolean(KEY_COACH_SEEN, false) == true
+
+    fun markCoachMarksSeen() {
+        prefs?.edit()?.putBoolean(KEY_COACH_SEEN, true)?.apply()
     }
 
     fun togglePinned(tripId: String): Set<String> {

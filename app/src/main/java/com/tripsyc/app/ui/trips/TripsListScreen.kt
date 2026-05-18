@@ -67,6 +67,9 @@ fun TripsListScreen(
     var showSampleTrip by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
     var welcomeReplayPending by remember { mutableStateOf(false) }
+    var showCoachMarks by remember {
+        mutableStateOf(!com.tripsyc.app.data.prefs.TripPrefsStore.coachMarksSeen())
+    }
 
     if (celebrationTrip != null) {
         com.tripsyc.app.ui.onboarding.TripCreatedScreen(
@@ -460,6 +463,23 @@ fun TripsListScreen(
                 celebrationTrip = trip
             }
         )
+    }
+
+    if (showCoachMarks) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = {
+                showCoachMarks = false
+                com.tripsyc.app.data.prefs.TripPrefsStore.markCoachMarksSeen()
+            },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            com.tripsyc.app.ui.onboarding.CoachMarksOverlay(
+                onDismiss = {
+                    showCoachMarks = false
+                    com.tripsyc.app.data.prefs.TripPrefsStore.markCoachMarksSeen()
+                }
+            )
+        }
     }
 
     if (showHelp) {
