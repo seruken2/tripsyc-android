@@ -491,11 +491,15 @@ interface ApiService {
     suspend fun respondToInvite(@Body body: Map<String, String>): InviteActionResponse
 
     // ─── Notification Preferences ─────────────────────────────────────────────
+    //
+    // Server route is /api/notification-prefs (singular) with tripId
+    // as a query param on GET and as a body field on POST — NOT the
+    // RESTful path-style endpoint the old code assumed.
 
-    @GET("api/notifications/preferences/{tripId}")
-    suspend fun getNotificationPrefs(@Path("tripId") tripId: String): NotificationPref
+    @GET("api/notification-prefs")
+    suspend fun getNotificationPrefs(@Query("tripId") tripId: String): NotificationPref
 
-    @PATCH("api/notifications/preferences")
+    @POST("api/notification-prefs")
     suspend fun updateNotificationPrefs(@Body body: Map<String, String>): NotificationPref
 
     // ─── Device Tokens (FCM) ──────────────────────────────────────────────────
