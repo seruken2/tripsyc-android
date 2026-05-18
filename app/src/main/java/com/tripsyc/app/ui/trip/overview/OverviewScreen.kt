@@ -507,6 +507,67 @@ fun OverviewScreen(
                                 Text(text = "Destination: $destName", color = Chalk900)
                             }
                         }
+
+                        // Calendar export — only when dates are locked.
+                        // Uses Intent.ACTION_INSERT so the user confirms
+                        // in their own calendar app; no permission prompt.
+                        if (isDateLocked && dateLock?.lockedValue != null) {
+                            Surface(
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                                color = Coral.copy(alpha = 0.08f),
+                                onClick = {
+                                    val (startMs, endMs) = parseLockedDateRangeMs(dateLock.lockedValue!!)
+                                    if (startMs != null) {
+                                        val locationLabel = if (isDestLocked && destLock?.lockedValue != null) {
+                                            trip.destinations?.firstOrNull { it.id == destLock.lockedValue }
+                                                ?.let { "${it.city}, ${it.country}" }
+                                                ?: destLock.lockedValue
+                                        } else null
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_INSERT)
+                                            .setData(android.provider.CalendarContract.Events.CONTENT_URI)
+                                            .putExtra(android.provider.CalendarContract.Events.TITLE, trip.name)
+                                            .putExtra(
+                                                android.provider.CalendarContract.EXTRA_EVENT_BEGIN_TIME,
+                                                startMs
+                                            )
+                                            .putExtra(
+                                                android.provider.CalendarContract.EXTRA_EVENT_END_TIME,
+                                                endMs ?: startMs
+                                            )
+                                            .putExtra(android.provider.CalendarContract.EXTRA_EVENT_ALL_DAY, true)
+                                        if (locationLabel != null) {
+                                            intent.putExtra(
+                                                android.provider.CalendarContract.Events.EVENT_LOCATION,
+                                                locationLabel
+                                            )
+                                        }
+                                        runCatching { context.startActivity(intent) }
+                                    }
+                                }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.EventNote,
+                                        contentDescription = null,
+                                        tint = Coral,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Save trip dates to Calendar",
+                                        color = Coral,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -561,6 +622,19 @@ fun OverviewScreen(
             }
         }
     }
+}
+
+/// Same as parseLockedDateRange but returns epoch-ms in the device
+/// timezone for CalendarContract — events end on midnight of the
+/// day *after* the last attended day so all-day events display
+/// inclusively in the calendar app.
+private fun parseLockedDateRangeMs(value: String): Pair<Long?, Long?> {
+    val (from, until) = parseLockedDateRange(value)
+    if (from == null) return null to null
+    val zone = java.time.ZoneId.systemDefault()
+    val startMs = from.atStartOfDay(zone).toInstant().toEpochMilli()
+    val endMs = (until ?: from).plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+    return startMs to endMs
 }
 
 /// Parses the lock value "YYYY-MM-DD to YYYY-MM-DD" into two LocalDates.
