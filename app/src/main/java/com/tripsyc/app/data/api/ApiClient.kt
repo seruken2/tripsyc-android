@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -113,5 +114,23 @@ object ApiClient {
 
     fun clearSession() {
         cookieJar?.clearCookies()
+    }
+
+    /// Injects a session cookie obtained out-of-band (e.g. from the
+    /// /api/auth/google?mobile=1 callback that deep-links back as
+    /// tripsyc://google-auth?session=...). Cookie attributes mirror
+    /// what the backend would have set if the OAuth flow had gone
+    /// through a normal HTTP redirect.
+    fun setSessionCookie(value: String) {
+        val baseUrl = BASE_URL.toHttpUrlOrNull() ?: return
+        val cookie = Cookie.Builder()
+            .name("tripsyc_session")
+            .value(value)
+            .domain(baseUrl.host)
+            .path("/")
+            .httpOnly()
+            .secure()
+            .build()
+        cookieJar?.saveFromResponse(baseUrl, listOf(cookie))
     }
 }

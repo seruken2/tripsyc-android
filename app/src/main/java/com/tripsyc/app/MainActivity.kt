@@ -12,6 +12,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.tripsyc.app.data.api.ApiClient
 import com.tripsyc.app.data.prefs.TripPrefsStore
 import com.tripsyc.app.navigation.AppNavigation
 import com.tripsyc.app.push.InAppBanner
@@ -79,9 +80,25 @@ class MainActivity : ComponentActivity() {
             pendingTripId = tripId
         }
 
-        // Handle deep links: tripsyc://verify, tripsyc://join, https://www.tripsyc.com
+        // Handle deep links: tripsyc://verify, tripsyc://join,
+        // tripsyc://google-auth, https://www.tripsyc.com
         val data: Uri? = intent?.data
         if (data != null) {
+            // Google Sign-In callback — drop the session cookie into
+            // the cookie jar and route through navigation. The session
+            // is signed by the backend, so we don't have to validate.
+            if (data.scheme == "tripsyc" && data.host == "google-auth") {
+                val session = data.getQueryParameter("session")
+                if (!session.isNullOrBlank()) {
+                    ApiClient.setSessionCookie(session)
+                    // AppNavigation reads the session once at start.
+                    // Recreate the activity so the cookie picks up and
+                    // the user lands on Main instead of staying on
+                    // Login with a stale "no session" startDestination.
+                    recreate()
+                    return
+                }
+            }
             pendingDeepLink = data.toString()
         }
     }

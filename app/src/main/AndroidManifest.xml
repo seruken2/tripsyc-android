@@ -44,6 +44,14 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="www.tripsyc.com" />
             </intent-filter>
+
+            <!-- Google Sign-In callback: tripsyc://google-auth?session=... -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tripsyc" android:host="google-auth" />
+            </intent-filter>
         </activity>
 
         <!-- FCM Service -->

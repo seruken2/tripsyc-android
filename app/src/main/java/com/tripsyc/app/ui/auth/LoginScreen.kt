@@ -270,6 +270,56 @@ fun LoginScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+
+                    // ── OR divider ─────────────────────────────────
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        androidx.compose.material3.HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = Chalk200
+                        )
+                        Text("OR", color = Chalk400, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        androidx.compose.material3.HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = Chalk200
+                        )
+                    }
+
+                    // Google Sign-In — opens the web OAuth dance in
+                    // the default browser, which redirects back as
+                    // tripsyc://google-auth?session=... once consent
+                    // is granted. MainActivity unpacks the session
+                    // into the cookie jar.
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    OutlinedButton(
+                        onClick = {
+                            val base = com.tripsyc.app.data.api.ApiClient.BASE_URL.trimEnd('/')
+                            val url = "$base/api/auth/google?mobile=1"
+                            val intent = android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse(url)
+                            )
+                            runCatching { context.startActivity(intent) }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Chalk900
+                        )
+                    ) {
+                        Text("G", fontWeight = FontWeight.Bold, color = Coral, fontSize = 18.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Continue with Google",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
                 // Trust indicator pills row
