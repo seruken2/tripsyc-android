@@ -64,7 +64,7 @@ fun InviteScreen(trip: Trip) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        Text("Invite People", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Chalk900)
+        Text("Invite", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Chalk900)
 
         // Invite code card
         Surface(

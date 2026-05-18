@@ -245,6 +245,23 @@ fun TripDetailScreen(
     }
 }
 
+/// Feature meta for the More grid. Matches the iOS TripMoreFeature enum:
+/// per-feature title, subtitle, icon, tint color, and category.
+private data class MoreFeatureMeta(
+    val tab: MoreTab,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val title: String,
+    val subtitle: String,
+    val tint: Color,
+    val category: MoreCategory
+)
+
+private enum class MoreCategory(val label: String, val accent: Color) {
+    PLAN("Plan Together", Coral),
+    TRACK("Track & Share", Dusk),
+    GROUP("Group", Sage)
+}
+
 @Composable
 fun MoreMenuScreen(
     trip: Trip,
@@ -253,91 +270,159 @@ fun MoreMenuScreen(
     val dateLock = trip.locks?.firstOrNull { it.lockType == LockType.DATE }
     val destLock = trip.locks?.firstOrNull { it.lockType == LockType.DESTINATION }
     val isAnyLocked = (dateLock?.locked == true) || (destLock?.locked == true)
-
     val isFullyLocked = (dateLock?.locked == true) && (destLock?.locked == true)
-    val baseItems = mutableListOf(
-        Triple(MoreTab.Polls, Icons.Default.Poll, "Polls"),
-        Triple(MoreTab.Notes, Icons.Default.Note, "Notes"),
-        Triple(MoreTab.Packing, Icons.Default.Luggage, "Packing"),
-        Triple(MoreTab.Itinerary, Icons.Default.ListAlt, "Itinerary"),
-        Triple(MoreTab.SmartItinerary, Icons.Default.AutoAwesome, "Smart Plan"),
-        Triple(MoreTab.Guide, Icons.Default.Book, "Trip Guide"),
-        Triple(MoreTab.Expenses, Icons.Default.AccountBalance, "Expenses"),
-        Triple(MoreTab.Photos, Icons.Default.PhotoLibrary, "Photos"),
-        Triple(MoreTab.Snaps, Icons.Default.PhotoCamera, "Snaps"),
-        Triple(MoreTab.Responsibilities, Icons.Default.CheckCircle, "Tasks"),
-        Triple(MoreTab.Memories, Icons.Default.Favorite, "Memories"),
-        Triple(MoreTab.GroupRewind, Icons.Default.EmojiEvents, "Group Rewind"),
+
+    // iOS subtitles / tint colors / categories — mirrored verbatim so
+    // users see identical descriptive copy and color coding across
+    // platforms. Order within each category matches the iOS enum.
+    val planFeatures = listOf(
+        MoreFeatureMeta(MoreTab.Polls, Icons.Default.Poll, "Polls", "Vote on dates & destinations", Dusk, MoreCategory.PLAN),
+        MoreFeatureMeta(MoreTab.Notes, Icons.Default.Note, "Notes", "Shared trip notes", Gold, MoreCategory.PLAN),
+        MoreFeatureMeta(MoreTab.Packing, Icons.Default.Luggage, "Packing List", "Never forget a thing", Sage, MoreCategory.PLAN),
+        MoreFeatureMeta(MoreTab.Itinerary, Icons.Default.ListAlt, "Itinerary", "Day-by-day plans", Dusk, MoreCategory.PLAN),
+        MoreFeatureMeta(MoreTab.SmartItinerary, Icons.Default.AutoAwesome, "Smart Plan", "Group-voted day-by-day plan", Coral, MoreCategory.PLAN),
+        MoreFeatureMeta(MoreTab.Guide, Icons.Default.Book, "Trip Guide", "All plans in one place", Sage, MoreCategory.PLAN)
     )
-    if (isFullyLocked) {
-        baseItems += Triple(MoreTab.Summary, Icons.Default.Verified, "Trip Summary")
+
+    val trackFeatures = buildList {
+        add(MoreFeatureMeta(MoreTab.Expenses, Icons.Default.AccountBalance, "Expenses", "Track spending & settle up", Coral, MoreCategory.TRACK))
+        add(MoreFeatureMeta(MoreTab.Photos, Icons.Default.PhotoLibrary, "Photos", "Capture the memories", CoralLight, MoreCategory.TRACK))
+        add(MoreFeatureMeta(MoreTab.Snaps, Icons.Default.PhotoCamera, "Snaps", "Live moments that vanish", Coral, MoreCategory.TRACK))
+        add(MoreFeatureMeta(MoreTab.Responsibilities, Icons.Default.CheckCircle, "Tasks", "Assign & track to-dos", Sage, MoreCategory.TRACK))
+        add(MoreFeatureMeta(MoreTab.Memories, Icons.Default.Favorite, "Memories", "Trip recap & stats", Coral, MoreCategory.TRACK))
+        add(MoreFeatureMeta(MoreTab.GroupRewind, Icons.Default.EmojiEvents, "Group Rewind", "The crew's collective recap", Coral, MoreCategory.TRACK))
+        if (isFullyLocked) {
+            add(MoreFeatureMeta(MoreTab.Summary, Icons.Default.Verified, "Trip Summary", "Locked decisions & group", Sage, MoreCategory.TRACK))
+        }
     }
-    baseItems += listOf(
-        Triple(MoreTab.GroupProfile, Icons.Default.Groups, "Group Profile"),
-        Triple(MoreTab.Activity, Icons.Default.Notifications, "Activity"),
-        Triple(MoreTab.Invite, Icons.Default.PersonAdd, "Invite"),
-        Triple(MoreTab.Settings, Icons.Default.Settings, "Settings"),
-    )
-    val items = if (isAnyLocked) {
-        baseItems + Triple(MoreTab.Unlock, Icons.Default.LockOpen, "Unlock")
-    } else {
-        baseItems
+
+    val groupFeatures = buildList {
+        add(MoreFeatureMeta(MoreTab.GroupProfile, Icons.Default.Groups, "Group Profile", "Compatibility & preferences", Dusk, MoreCategory.GROUP))
+        add(MoreFeatureMeta(MoreTab.Activity, Icons.Default.Notifications, "Activity", "See what's happening", Gold, MoreCategory.GROUP))
+        add(MoreFeatureMeta(MoreTab.Invite, Icons.Default.PersonAdd, "Invite", "Grow your group", Coral, MoreCategory.GROUP))
+        add(MoreFeatureMeta(MoreTab.Settings, Icons.Default.Settings, "Settings", "Manage trip details", Chalk500, MoreCategory.GROUP))
+        if (isAnyLocked) {
+            add(MoreFeatureMeta(MoreTab.Unlock, Icons.Default.LockOpen, "Unlock", "Petition to reopen a locked decision", Coral, MoreCategory.GROUP))
+        }
     }
 
     androidx.compose.foundation.lazy.LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(28.dp)
     ) {
-        item {
+        listOf(planFeatures, trackFeatures, groupFeatures).forEach { features ->
+            if (features.isEmpty()) return@forEach
+            item {
+                MoreCategorySection(features = features, onSelect = onSelect)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MoreCategorySection(
+    features: List<MoreFeatureMeta>,
+    onSelect: (MoreTab) -> Unit
+) {
+    val category = features.first().category
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Section header: 3dp accent bar + uppercase tracking 1.0
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(category.accent)
+            )
             Text(
-                text = "More Options",
-                fontSize = 20.sp,
+                category.label.uppercase(),
+                color = Chalk400,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Chalk900,
-                modifier = Modifier.padding(vertical = 8.dp)
+                letterSpacing = 1.sp
             )
         }
-        items.chunked(2).forEach { rowItems ->
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    rowItems.forEach { (tab, icon, label) ->
-                        Surface(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
-                            color = CardBackground,
-                            shadowElevation = 2.dp,
-                            tonalElevation = 0.dp,
-                            onClick = { onSelect(tab) }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = label,
-                                    tint = Coral,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Text(
-                                    text = label,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Chalk900,
-                                    fontSize = 14.sp
-                                )
-                            }
-                        }
-                    }
-                    if (rowItems.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+        // 2-col grid of feature cards
+        features.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { f ->
+                    MoreFeatureCard(meta = f, modifier = Modifier.weight(1f), onClick = { onSelect(f.tab) })
+                }
+                if (row.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MoreFeatureCard(
+    meta: MoreFeatureMeta,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = CardBackground,
+        shadowElevation = 2.dp,
+        onClick = onClick
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Per-feature gradient icon circle — coral 0.20 → 0.08
+                // is the iOS treatment; we approximate with two layered
+                // ovals since Compose's Brush.radialGradient on a Circle
+                // looks identical to the LinearGradient iOS uses here.
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.linearGradient(
+                                listOf(meta.tint.copy(alpha = 0.20f), meta.tint.copy(alpha = 0.08f))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = meta.icon,
+                        contentDescription = null,
+                        tint = meta.tint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Chalk200,
+                    modifier = Modifier.size(14.dp).padding(top = 4.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                meta.title,
+                color = Chalk900,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                meta.subtitle,
+                color = Chalk400,
+                fontSize = 11.sp,
+                maxLines = 2,
+                modifier = Modifier.padding(top = 2.dp)
+            )
         }
     }
 }
@@ -365,13 +450,13 @@ fun MoreTabScreen(
                             MoreTab.Responsibilities -> "Tasks"
                             MoreTab.Activity -> "Activity"
                             MoreTab.Memories -> "Memories"
-                            MoreTab.Invite -> "Invite People"
+                            MoreTab.Invite -> "Invite"
                             MoreTab.Settings -> "Trip Settings"
                             MoreTab.Unlock -> "Unlock Vote"
                             MoreTab.Summary -> "Trip Summary"
                             MoreTab.GroupProfile -> "Group Profile"
                             MoreTab.Guide -> "Trip Guide"
-                            MoreTab.SmartItinerary -> "Smart Itinerary"
+                            MoreTab.SmartItinerary -> "Smart Plan"
                             MoreTab.Snaps -> "Snaps"
                             MoreTab.GroupRewind -> "Group Rewind"
                         },

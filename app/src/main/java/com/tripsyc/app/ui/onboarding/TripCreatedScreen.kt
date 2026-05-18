@@ -158,26 +158,27 @@ private fun NextStepRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // iOS uses a 40dp numbered circle with the digit itself as
+            // the affordance — no "Step N" prefix in the body.
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(accent.copy(alpha = 0.15f)),
+                    .background(accent.copy(alpha = 0.20f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
+                Text(
+                    number.toString(),
+                    color = accent,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        "Step $number",
-                        color = accent,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
                     Text(
                         title,
                         color = Chalk900,

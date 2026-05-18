@@ -161,12 +161,14 @@ fun UpcomingTripHero(
 
 private data class HeroPalette(val gradient: List<Color>, val eyebrow: String)
 
+/// Eyebrow tier matches iOS — four buckets, same thresholds, same
+/// uppercase labels. Day-0 is its own "trip starts today" moment so
+/// the user gets a distinct treatment vs. "next trip in 1d".
 private fun paletteForDays(days: Long): HeroPalette = when {
-    days <= 1 -> HeroPalette(listOf(Coral, Color(0xFFE85C90)), "ALMOST THERE")
-    days <= 7 -> HeroPalette(listOf(Coral, Gold), "NEXT WEEK")
-    days <= 30 -> HeroPalette(listOf(Dusk, Coral), "COMING UP")
-    days <= 90 -> HeroPalette(listOf(Dusk, Sage), "ON THE HORIZON")
-    else -> HeroPalette(listOf(Sage, Dusk), "SOMEDAY")
+    days == 0L -> HeroPalette(listOf(Coral, Color(0xFFE85C90)), "TRIP STARTS TODAY")
+    days <= 7 -> HeroPalette(listOf(Coral, Color(0xFFE85C90)), "ALMOST THERE")
+    days <= 30 -> HeroPalette(listOf(Coral, Gold), "COMING UP")
+    else -> HeroPalette(listOf(Dusk, Coral), "NEXT TRIP")
 }
 
 private fun Trip.lockedStartDate(): LocalDate? {
@@ -259,7 +261,7 @@ private fun MemoryFlashbackCard(anchor: MemoryAnchor, onTap: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Tap to revisit",
+                "Tap to revisit ${anchor.trip.name}.",
                 color = Color.White.copy(alpha = 0.85f),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold

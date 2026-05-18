@@ -151,16 +151,19 @@ private fun WrappedCard(data: WrappedResponse, modifier: Modifier = Modifier) {
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Text(
-                "TRIPSYC WRAPPED",
+                // iOS lays out "TRIPSYC" eyebrow on its own line, then
+                // "Wrapped <year>" as a stacked headline below — not
+                // the year-only big-number treatment.
+                "TRIPSYC",
                 color = Color.White.copy(alpha = 0.85f),
                 fontSize = 11.sp,
                 letterSpacing = 2.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                "${data.year}",
+                "Wrapped ${data.year}",
                 color = Color.White,
-                fontSize = 64.sp,
+                fontSize = 44.sp,
                 fontWeight = FontWeight.Black
             )
             Spacer(modifier = Modifier.height(4.dp))

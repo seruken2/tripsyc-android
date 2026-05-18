@@ -81,7 +81,7 @@ fun CalendarScreen(modifier: Modifier = Modifier) {
     ) {
         item {
             Column {
-                Text("Global Calendar", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Chalk900)
+                Text("My Availability", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Chalk900)
                 Text("Mark your general availability across all trips", fontSize = 14.sp, color = Chalk500)
             }
         }

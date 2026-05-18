@@ -78,7 +78,7 @@ fun SmartItineraryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Smart Itinerary", fontWeight = FontWeight.Bold, color = Chalk900) },
+                title = { Text("Smart Plan", fontWeight = FontWeight.Bold, color = Chalk900) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Chalk700)

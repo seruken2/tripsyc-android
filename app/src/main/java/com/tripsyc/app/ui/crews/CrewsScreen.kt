@@ -81,7 +81,7 @@ fun CrewsScreen() {
             EmptyState(
                 icon = "👥",
                 title = "No crews yet",
-                message = "Group your usual travelers so you can pull them into new trips with one tap."
+                message = "Save a friend group once, then pick it when you start a new trip."
             )
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {

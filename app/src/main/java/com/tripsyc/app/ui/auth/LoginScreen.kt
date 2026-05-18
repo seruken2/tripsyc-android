@@ -322,16 +322,6 @@ fun LoginScreen(
                     }
                 }
 
-                // Trust indicator pills row
-                Row(
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    TrustPill(icon = "🔒", text = "Secure")
-                    TrustPill(icon = "✉", text = "Code by email")
-                    TrustPill(icon = "🚫", text = "No spam")
-                }
-
                 // Terms notice
                 val termsAnnotated = buildAnnotatedString {
                     withStyle(SpanStyle(color = Chalk400, fontSize = 11.sp)) {

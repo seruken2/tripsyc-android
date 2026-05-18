@@ -87,7 +87,7 @@ fun RewindScreen(onBack: () -> Unit) {
                 )
                 data != null -> RewindContent(data = data!!)
                 else -> Text(
-                    "No trips logged for this year yet — once you've taken a Tripsyc trip, your wrap will appear here.",
+                    "Nothing to rewind yet",
                     color = Chalk500,
                     modifier = Modifier.padding(16.dp)
                 )
@@ -141,10 +141,19 @@ private fun RewindContent(data: RewindResponse) {
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // iOS uses a separate eyebrow "YOUR PERSONA" + the
+                    // bare label on the next line, not a sentence.
                     Text(data.persona.emoji, fontSize = 32.sp)
                     Text(
-                        "You're a ${data.persona.label}",
+                        "YOUR PERSONA",
                         color = Gold,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.4.sp
+                    )
+                    Text(
+                        data.persona.label,
+                        color = Chalk900,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
                     )
@@ -159,7 +168,7 @@ private fun RewindContent(data: RewindResponse) {
                 Surface(shape = RoundedCornerShape(16.dp), color = CardBackground, shadowElevation = 2.dp) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
-                            "Your travel crew",
+                            "TRAVEL BUDDIES",
                             fontWeight = FontWeight.SemiBold,
                             color = Chalk900
                         )
@@ -218,7 +227,7 @@ private fun RewindContent(data: RewindResponse) {
             item {
                 Surface(shape = RoundedCornerShape(16.dp), color = CardBackground, shadowElevation = 2.dp) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Where you went", fontWeight = FontWeight.SemiBold, color = Chalk900)
+                        Text("PLACES", fontWeight = FontWeight.Bold, color = Chalk500, fontSize = 11.sp, letterSpacing = 1.sp)
                         Row(
                             modifier = Modifier.horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -251,7 +260,7 @@ private fun RewindContent(data: RewindResponse) {
                     ) {
                         Icon(Icons.Default.Star, contentDescription = null, tint = Gold)
                         Column {
-                            Text("Your busiest month", color = Chalk500, fontSize = 12.sp)
+                            Text("FAVORITE MONTH", color = Chalk500, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                             Text(month, color = Chalk900, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                         }
                     }

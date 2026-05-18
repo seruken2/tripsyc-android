@@ -83,7 +83,7 @@ fun SampleTripPreview(
                 ) {
                     Column {
                         Text(
-                            "Sample",
+                            "SAMPLE TRIP",
                             color = Color.White.copy(alpha = 0.7f),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold

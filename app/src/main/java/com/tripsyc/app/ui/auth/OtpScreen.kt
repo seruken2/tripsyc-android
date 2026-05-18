@@ -7,6 +7,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,11 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tripsyc.app.data.api.models.User
@@ -74,77 +78,57 @@ fun OtpScreen(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ── Verification Card ────────────────────────────────────────
+            // Matches iOS OTPVerifyView: envelope-in-coral-circle icon,
+            // serif-bold title "Check your email", body sentence with
+            // bold email, code field with dash-placeholder. No green
+            // "VERIFICATION ✈" header strip — iOS doesn't have one.
+            Spacer(modifier = Modifier.height(28.dp))
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(Coral.copy(alpha = 0.10f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    androidx.compose.material.icons.Icons.Default.Email,
+                    contentDescription = null,
+                    tint = Coral,
+                    modifier = Modifier.size(44.dp)
+                )
+            }
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "Check your email",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Chalk900,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
+                )
+                Text(
+                    text = buildAnnotatedString {
+                        append("We sent a 6-digit code to\n")
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Chalk900)) {
+                            append(email)
+                        }
+                    },
+                    fontSize = 15.sp,
+                    color = Chalk500,
+                    textAlign = TextAlign.Center
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(
-                        elevation = 8.dp,
-                        shape = RoundedCornerShape(18.dp),
-                        ambientColor = Color.Black.copy(alpha = 0.08f)
-                    )
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color.White)
+                    .padding(top = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Sage-green header strip
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Sage)
-                        .padding(vertical = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "VERIFICATION ✈",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Envelope icon in coral tinted circle
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(Coral.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = "📧", fontSize = 32.sp)
-                    }
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = "Enter the 6-digit code",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Chalk900
-                        )
-                        Text(
-                            text = "sent to",
-                            fontSize = 14.sp,
-                            color = Chalk500,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = email,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Chalk900,
-                            textAlign = TextAlign.Center
-                        )
-                    }
 
                     // 6-digit monospace code input
                     OutlinedTextField(
@@ -153,7 +137,7 @@ fun OtpScreen(
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = {
                             Text(
-                                "••••••",
+                                "— — — — — —",
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth(),
                                 color = Chalk300,
@@ -227,7 +211,6 @@ fun OtpScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
-                }
             }
 
             // ── Countdown + Resend ───────────────────────────────────────

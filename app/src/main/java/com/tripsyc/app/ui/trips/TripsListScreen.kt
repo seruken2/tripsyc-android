@@ -41,9 +41,9 @@ import com.tripsyc.app.ui.common.LoadingView
 import com.tripsyc.app.ui.theme.*
 
 enum class TripSortOption(val label: String) {
-    Newest("Newest first"),
-    Oldest("Oldest first"),
-    Name("A–Z name"),
+    Newest("Newest"),
+    Oldest("Oldest"),
+    Name("A-Z"),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -245,7 +245,7 @@ fun TripsListScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                "See what a Tripsyc trip looks like",
+                                "Or see an example first",
                                 color = Coral,
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 13.sp
@@ -335,7 +335,11 @@ fun TripsListScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Pending Invitations",
+                                    // iOS: "You owe someone an answer" /
+                                    // "You owe N people an answer" — same
+                                    // emotional framing on Android.
+                                    text = if (state.pendingInvites.size == 1) "You owe someone an answer"
+                                    else "You owe ${state.pendingInvites.size} people an answer",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Chalk900
