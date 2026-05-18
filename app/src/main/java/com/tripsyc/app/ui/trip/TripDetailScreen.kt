@@ -206,40 +206,51 @@ fun TripDetailScreen(
         },
         containerColor = Chalk50
     ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
+        // Column was leaving the tab content with an unbounded vertical
+        // constraint, so any LazyColumn-backed screen (Chat / Budget /
+        // Destinations / More) collapsed to zero height and the bottom
+        // tabs looked empty. Weight(1f) gives the tab body the
+        // remaining bounded height after the presence row.
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
             LivePresenceRow(tripId = freshTrip.id)
-            when (selectedTab) {
-                TripTab.Overview -> OverviewScreen(
-                    trip = freshTrip,
-                    currentUser = currentUser,
-                    onTabSelected = { selectedTab = it },
-                    isOrganizer = isOrganizer,
-                    onTripUpdated = { freshTrip = it },
-                    onMemberChanged = { reloadTrip() }
-                )
-                TripTab.Dates -> DatesScreen(
-                    tripId = freshTrip.id,
-                    isOrganizer = isOrganizer,
-                    existingLock = dateLock,
-                    tripName = freshTrip.name
-                )
-                TripTab.Destinations -> DestinationsScreen(
-                    tripId = freshTrip.id,
-                    isOrganizer = isOrganizer,
-                    existingLock = destLock,
-                    destinationPhase = freshTrip.destinationPhase,
-                    currentUser = currentUser
-                )
-                TripTab.Budget -> BudgetScreen(tripId = freshTrip.id)
-                TripTab.Chat -> ChatScreen(
-                    tripId = freshTrip.id,
-                    currentUser = currentUser,
-                    isOrganizer = isOrganizer
-                )
-                TripTab.More -> MoreMenuScreen(
-                    trip = freshTrip,
-                    onSelect = { selectedMoreTab = it }
-                )
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                when (selectedTab) {
+                    TripTab.Overview -> OverviewScreen(
+                        trip = freshTrip,
+                        currentUser = currentUser,
+                        onTabSelected = { selectedTab = it },
+                        isOrganizer = isOrganizer,
+                        onTripUpdated = { freshTrip = it },
+                        onMemberChanged = { reloadTrip() }
+                    )
+                    TripTab.Dates -> DatesScreen(
+                        tripId = freshTrip.id,
+                        isOrganizer = isOrganizer,
+                        existingLock = dateLock,
+                        tripName = freshTrip.name
+                    )
+                    TripTab.Destinations -> DestinationsScreen(
+                        tripId = freshTrip.id,
+                        isOrganizer = isOrganizer,
+                        existingLock = destLock,
+                        destinationPhase = freshTrip.destinationPhase,
+                        currentUser = currentUser
+                    )
+                    TripTab.Budget -> BudgetScreen(tripId = freshTrip.id)
+                    TripTab.Chat -> ChatScreen(
+                        tripId = freshTrip.id,
+                        currentUser = currentUser,
+                        isOrganizer = isOrganizer
+                    )
+                    TripTab.More -> MoreMenuScreen(
+                        trip = freshTrip,
+                        onSelect = { selectedMoreTab = it }
+                    )
+                }
             }
         }
     }

@@ -492,7 +492,12 @@ fun OverviewScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Gold, modifier = Modifier.size(18.dp))
-                                Text(text = "Date: ${dateLock.lockedValue}", color = Chalk900)
+                                // Match iOS formatLockedDate: turn the
+                                // raw "yyyy-MM-dd to yyyy-MM-dd" string
+                                // into "MMM d – MMM d, yyyy" so the row
+                                // reads as a date range, not a raw
+                                // dump.
+                                Text(text = "Date: ${formatLockedDate(dateLock.lockedValue!!)}", color = Chalk900)
                             }
                         }
                         if (isDestLocked && destLock?.lockedValue != null) {
@@ -621,6 +626,30 @@ fun OverviewScreen(
                 }
             }
         }
+    }
+}
+
+/// Pretty-prints the trip's locked date range. Mirrors iOS
+/// formatLockedDate: "2026-05-20 to 2026-05-30" → "May 20 – May 30,
+/// 2026"; a single locked day → "May 20, 2026"; anything we can't
+/// parse falls back to the raw value.
+private fun formatLockedDate(value: String): String {
+    val parser = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val display = java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US)
+    val parts = value.split(" to ")
+    return when (parts.size) {
+        2 -> {
+            val start = runCatching { java.time.LocalDate.parse(parts[0].trim(), parser) }.getOrNull()
+            val end = runCatching { java.time.LocalDate.parse(parts[1].trim(), parser) }.getOrNull()
+            if (start != null && end != null) {
+                "${display.format(start)} – ${display.format(end)}, ${end.year}"
+            } else value
+        }
+        1 -> {
+            val start = runCatching { java.time.LocalDate.parse(parts[0].trim(), parser) }.getOrNull()
+            if (start != null) "${display.format(start)}, ${start.year}" else value
+        }
+        else -> value
     }
 }
 
