@@ -1,6 +1,8 @@
 package com.tripsyc.app.ui.trip
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -8,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -138,6 +141,8 @@ fun TripDetailScreen(
                 shadowElevation = 8.dp,
                 tonalElevation = 0.dp
             ) {
+                val tabBadges by com.tripsyc.app.push.TabBadgeStore.badges.collectAsState()
+                val pendingTabs = tabBadges[freshTrip.id] ?: emptySet()
                 NavigationBar(
                     containerColor = Color.White,
                     tonalElevation = 0.dp
@@ -147,14 +152,29 @@ fun TripDetailScreen(
                             selected = selectedTab == tab,
                             onClick = {
                                 selectedTab = tab
+                                com.tripsyc.app.push.TabBadgeStore.clear(freshTrip.id, tab.name.lowercase())
                                 reloadTrip()
                             },
                             icon = {
-                                Icon(
-                                    tab.icon,
-                                    contentDescription = tab.label,
-                                    modifier = Modifier.size(22.dp)
-                                )
+                                // Coral dot overlay when this tab has unseen
+                                // FCM activity. Tap clears via TabBadgeStore.
+                                Box {
+                                    Icon(
+                                        tab.icon,
+                                        contentDescription = tab.label,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    if (tab.name.lowercase() in pendingTabs) {
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .offset(x = 4.dp, y = (-2).dp)
+                                                .size(7.dp)
+                                                .clip(CircleShape)
+                                                .background(Coral)
+                                        )
+                                    }
+                                }
                             },
                             label = {
                                 Text(

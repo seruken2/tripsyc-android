@@ -40,6 +40,15 @@ class TripFcmService : FirebaseMessagingService() {
         val tripId = message.data["tripId"]
         val type = message.data["type"]?.lowercase()
         val inviteId = message.data["inviteId"]
+        val tab = message.data["tab"]
+
+        // Mark per-trip tab badge regardless of foreground state. The
+        // user might be on a different tab in this trip, or on a
+        // different trip entirely — either way, the dot signals that
+        // there's unseen activity worth opening that tab for.
+        if (tripId != null && !tab.isNullOrBlank()) {
+            TabBadgeStore.mark(tripId, tab)
+        }
 
         // App is in foreground — route to the in-app banner instead of
         // posting a system notification, which would yank the user's
