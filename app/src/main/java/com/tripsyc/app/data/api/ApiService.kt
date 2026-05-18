@@ -140,6 +140,12 @@ interface ApiService {
         @Query("year") year: Int
     ): HolidaysResponse
 
+    @POST("api/trips/{id}/presence")
+    suspend fun heartbeatPresence(@Path("id") tripId: String): Response<Unit>
+
+    @GET("api/trips/{id}/presence")
+    suspend fun getPresence(@Path("id") tripId: String): PresenceResponse
+
     // ─── Snaps ─────────────────────────────────────────────────────────────
 
     @GET("api/trips/{id}/snaps")

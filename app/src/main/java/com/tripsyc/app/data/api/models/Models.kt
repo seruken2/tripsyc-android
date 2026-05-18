@@ -348,6 +348,27 @@ data class HolidaysResponse(
     val holidays: List<Holiday> = emptyList()
 )
 
+// ─── Live presence (Redis-backed REST polling) ──────────────────────────────
+
+data class PresenceViewer(
+    val userId: String,
+    val name: String,
+    val avatarUrl: String? = null
+)
+
+data class PresenceRecentlySeen(
+    val userId: String,
+    val name: String,
+    val avatarUrl: String? = null,
+    val lastSeenAt: String? = null,
+    val secondsAgo: Int = 0
+)
+
+data class PresenceResponse(
+    val viewers: List<PresenceViewer> = emptyList(),
+    val recentlySeen: List<PresenceRecentlySeen> = emptyList()
+)
+
 data class RewindResponse(
     val year: Int,
     val displayName: String,

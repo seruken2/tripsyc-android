@@ -177,7 +177,8 @@ fun TripDetailScreen(
         },
         containerColor = Chalk50
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
+        Column(modifier = Modifier.padding(padding)) {
+            LivePresenceRow(tripId = freshTrip.id)
             when (selectedTab) {
                 TripTab.Overview -> OverviewScreen(
                     trip = freshTrip,
