@@ -155,13 +155,19 @@ fun ChatScreen(
         }
     }
 
-    // Send typing signal when text changes (debounced by just firing on change)
+    // Send typing signal when text changes — throttled to one ping
+    // every 2 seconds to match iOS's typingSendThrottle. Without the
+    // throttle this fired on every keystroke; a fast typist was
+    // hitting the server ~5x/s.
+    var lastTypingPingMs by remember { mutableStateOf(0L) }
     LaunchedEffect(messageText) {
-        if (messageText.isNotEmpty()) {
-            try {
-                ApiClient.apiService.sendTyping(mapOf("tripId" to tripId))
-            } catch (_: Exception) {}
-        }
+        if (messageText.isEmpty()) return@LaunchedEffect
+        val now = System.currentTimeMillis()
+        if (now - lastTypingPingMs < 2_000L) return@LaunchedEffect
+        lastTypingPingMs = now
+        try {
+            ApiClient.apiService.sendTyping(mapOf("tripId" to tripId))
+        } catch (_: Exception) {}
     }
 
     // Auto-scroll to bottom on new messages
