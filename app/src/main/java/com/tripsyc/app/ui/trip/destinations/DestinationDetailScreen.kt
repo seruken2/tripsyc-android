@@ -124,7 +124,7 @@ fun DestinationDetailScreen(
                                 .background(Brush.linearGradient(listOf(Dusk, Coral.copy(alpha = 0.7f))))
                         ) {
                             Text(
-                                text = destination.city.first().uppercase(),
+                                text = destination.city.firstOrNull()?.uppercase() ?: "?",
                                 color = Color.White.copy(alpha = 0.2f),
                                 fontSize = 120.sp,
                                 fontWeight = FontWeight.Bold,

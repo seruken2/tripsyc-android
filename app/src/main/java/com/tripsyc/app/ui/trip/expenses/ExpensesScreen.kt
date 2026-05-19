@@ -195,7 +195,7 @@ fun ExpensesScreen(
                 )
             }
         } else {
-            items(expenses) { expense ->
+            items(expenses, key = { it.id }) { expense ->
                 ExpenseCard(
                     expense = expense,
                     currentUserId = currentUser?.id,

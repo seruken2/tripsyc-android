@@ -167,18 +167,31 @@ fun AppNavigation(
             val tripId = backStackEntry.arguments?.getString("tripId") ?: return@composable
             // Load trip and show TripDetailScreen
             var trip by remember { mutableStateOf<com.tripsyc.app.data.api.models.Trip?>(null) }
-            LaunchedEffect(tripId) {
+            var loadFailed by remember { mutableStateOf(false) }
+            var reloadKey by remember { mutableStateOf(0) }
+            LaunchedEffect(tripId, reloadKey) {
+                loadFailed = false
                 try {
                     trip = withContext(Dispatchers.IO) { ApiClient.apiService.getTrip(tripId) }
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                    // Surface the failure — the catch used to swallow it
+                    // silently, stranding the user on an endless spinner.
+                    loadFailed = true
+                }
             }
-            trip?.let { t ->
-                com.tripsyc.app.ui.trip.TripDetailScreen(
-                    trip = t,
+            val loadedTrip = trip
+            when {
+                loadedTrip != null -> com.tripsyc.app.ui.trip.TripDetailScreen(
+                    trip = loadedTrip,
                     currentUser = currentUser,
                     onBack = { navController.popBackStack() }
                 )
-            } ?: com.tripsyc.app.ui.common.LoadingScreen()
+                loadFailed -> com.tripsyc.app.ui.common.ErrorView(
+                    message = "Couldn't load this trip. Check your connection and try again.",
+                    onRetry = { reloadKey++ }
+                )
+                else -> com.tripsyc.app.ui.common.LoadingScreen()
+            }
         }
     }
 }

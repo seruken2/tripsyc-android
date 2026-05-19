@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -146,7 +147,7 @@ fun PackingScreen(tripId: String) {
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Icon(
-                                        if (isAdded) Icons.Default.Add else Icons.Default.Add,
+                                        if (isAdded) Icons.Default.Check else Icons.Default.Add,
                                         contentDescription = null,
                                         tint = if (isAdded) Sage else Gold,
                                         modifier = Modifier.size(11.dp)

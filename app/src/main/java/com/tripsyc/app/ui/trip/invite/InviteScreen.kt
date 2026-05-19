@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.tripsyc.app.data.api.ApiClient
 import com.tripsyc.app.data.api.models.Trip
 import com.tripsyc.app.ui.theme.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -55,6 +56,15 @@ fun InviteScreen(trip: Trip) {
         } catch (_: Exception) {
             // Past-co-travelers is a nice-to-have; failure shouldn't
             // break the rest of the invite flow.
+        }
+    }
+
+    // "Copied!" is transient feedback — reset it after a moment so the
+    // button doesn't stay stuck on "Copied!" forever after one tap.
+    LaunchedEffect(copied) {
+        if (copied) {
+            delay(2000)
+            copied = false
         }
     }
 
