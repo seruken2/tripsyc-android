@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -76,23 +75,16 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
             .padding(top = 52.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Logo header
-        Image(
-            painter = painterResource(R.drawable.tripsyc_icon),
-            contentDescription = "Tripsyc",
-            modifier = Modifier
-                .size(76.dp)
-                .clip(RoundedCornerShape(18.dp)),
-            contentScale = ContentScale.Fit
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        // Logo header — single wordmark only. The previous version
+        // stacked `tripsyc_icon` (which already embeds the wordmark
+        // + tagline) on top of `tripsyc_logo`, producing two visible
+        // "Tripsyc" lockups on the welcome carousel.
         Image(
             painter = painterResource(R.drawable.tripsyc_logo),
             contentDescription = "Tripsyc",
             modifier = Modifier
-                .height(28.dp)
-                .widthIn(max = 160.dp),
-            colorFilter = ColorFilter.tint(Coral),
+                .height(36.dp)
+                .widthIn(max = 200.dp),
             contentScale = ContentScale.Fit
         )
         Spacer(modifier = Modifier.height(8.dp))
