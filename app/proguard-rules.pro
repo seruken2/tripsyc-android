@@ -1,4 +1,4 @@
-# Tripsyc Android — ProGuard / R8 rules
+# Tripwave Android — ProGuard / R8 rules
 # See https://developer.android.com/studio/build/shrink-code
 
 # Preserve annotations, signatures, and exceptions (needed by Retrofit / reflection).
@@ -36,16 +36,16 @@
     @com.google.gson.annotations.SerializedName <fields>;
 }
 
-# Keep all Tripsyc API models (Gson reflects on fields).
--keep class com.tripsyc.app.data.api.models.** { *; }
--keepclassmembers class com.tripsyc.app.data.api.models.** {
+# Keep all Tripwave API models (Gson reflects on fields).
+-keep class com.tripwave.app.data.api.models.** { *; }
+-keepclassmembers class com.tripwave.app.data.api.models.** {
     <init>(...);
     <fields>;
 }
 
 # ───── Firebase Messaging ─────────────────────────────────────────────────────
 -keep class com.google.firebase.** { *; }
--keep class com.tripsyc.app.push.** { *; }
+-keep class com.tripwave.app.push.** { *; }
 -dontwarn com.google.firebase.**
 
 # ───── Coil ───────────────────────────────────────────────────────────────────
@@ -56,8 +56,8 @@
 -dontwarn androidx.compose.**
 
 # ───── App entry points ───────────────────────────────────────────────────────
--keep class com.tripsyc.app.MainActivity { *; }
--keep class com.tripsyc.app.TripsycApp { *; }
+-keep class com.tripwave.app.MainActivity { *; }
+-keep class com.tripwave.app.TripwaveApp { *; }
 
 # Remove Log.d / Log.v in release.
 -assumenosideeffects class android.util.Log {

@@ -22,11 +22,11 @@ fun secret(key: String): String? =
     keystoreProps.getProperty(key) ?: System.getenv(key)
 
 android {
-    namespace = "com.tripsyc.app"
+    namespace = "com.tripwave.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.tripsyc.app"
+        applicationId = "com.tripwave.app"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -34,17 +34,17 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "BASE_URL", "\"https://www.tripsyc.com\"")
+        buildConfigField("String", "BASE_URL", "\"https://www.tripwave.co\"")
     }
 
     signingConfigs {
         create("release") {
-            val storePath = secret("TRIPSYC_STORE_FILE")
+            val storePath = secret("TRIPWAVE_STORE_FILE")
             if (!storePath.isNullOrBlank()) {
                 storeFile = file(storePath)
-                storePassword = secret("TRIPSYC_STORE_PASSWORD")
-                keyAlias = secret("TRIPSYC_KEY_ALIAS")
-                keyPassword = secret("TRIPSYC_KEY_PASSWORD")
+                storePassword = secret("TRIPWAVE_STORE_PASSWORD")
+                keyAlias = secret("TRIPWAVE_KEY_ALIAS")
+                keyPassword = secret("TRIPWAVE_KEY_PASSWORD")
             }
         }
     }
@@ -63,7 +63,7 @@ android {
             )
             // Only attach the signing config if a keystore was provided;
             // this lets `assembleRelease` still run (unsigned) on CI without secrets.
-            if (!secret("TRIPSYC_STORE_FILE").isNullOrBlank()) {
+            if (!secret("TRIPWAVE_STORE_FILE").isNullOrBlank()) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
