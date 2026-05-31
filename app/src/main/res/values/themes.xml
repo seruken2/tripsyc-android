@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base Tripsyc theme — no action bar, chalk50 status bar -->
-    <style name="Theme.Tripsyc" parent="android:Theme.Material.Light.NoActionBar">
+    <!-- Base Tripwave theme — no action bar, chalk50 status bar -->
+    <style name="Theme.Tripwave" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">@color/chalk50</item>
         <item name="android:navigationBarColor">@color/chalk50</item>
         <item name="android:windowLightStatusBar">true</item>

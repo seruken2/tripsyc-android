@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Tripsyc"
+rootProject.name = "Tripwave"
 include(":app")
