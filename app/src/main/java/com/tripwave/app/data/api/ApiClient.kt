@@ -79,10 +79,19 @@ object ApiClient {
         val builder = OkHttpClient.Builder()
             .cookieJar(cookieJar ?: throw IllegalStateException("ApiClient not initialized"))
             .addInterceptor { chain ->
-                val request = chain.request().newBuilder()
+                val req = chain.request().newBuilder()
                     .addHeader("Accept", "application/json")
-                    .build()
-                chain.proceed(request)
+                // Shared mobile-client secret. Lets the server skip
+                // Cloudflare Turnstile verification on /api/auth/send-otp
+                // (which native can't satisfy since there's no browser
+                // widget). Server still enforces email + IP rate limits,
+                // so a leaked secret can't power bulk spam. Read from
+                // BuildConfig.MOBILE_CLIENT_SECRET; omit when unset
+                // rather than sending an empty header.
+                if (BuildConfig.MOBILE_CLIENT_SECRET.isNotBlank()) {
+                    req.addHeader("X-Tripwave-Mobile-Secret", BuildConfig.MOBILE_CLIENT_SECRET)
+                }
+                chain.proceed(req.build())
             }
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)

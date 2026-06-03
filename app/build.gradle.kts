@@ -35,6 +35,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BASE_URL", "\"https://www.tripwave.co\"")
+        // Shared mobile-client secret. Server-side check is in
+        // src/lib/bot-protection.ts (isTrustedMobileClient). When this
+        // header value matches MOBILE_CLIENT_SECRET on the server, the
+        // /api/auth/send-otp Cloudflare Turnstile gate is skipped.
+        // Sourced from keystore.properties / env var TRIPWAVE_MOBILE_SECRET
+        // — falls back to empty so unconfigured local builds compile,
+        // sign-in just hits the Turnstile gate (which native can't satisfy
+        // → login fails with 'Verification required'). Configure in
+        // production before release.
+        buildConfigField(
+            "String",
+            "MOBILE_CLIENT_SECRET",
+            "\"${secret("TRIPWAVE_MOBILE_SECRET").orEmpty()}\""
+        )
     }
 
     signingConfigs {
