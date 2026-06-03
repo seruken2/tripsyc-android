@@ -113,6 +113,10 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.coil.compose)
     implementation(libs.gson)
+    // Glance — Jetpack Compose-based home-screen widgets. Used by
+    // com.tripwave.app.widget for the "next trip" countdown widget.
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
     // Firebase (requires google-services.json in app/ directory - get from Firebase Console)
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-messaging-ktx")

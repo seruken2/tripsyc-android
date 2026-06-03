@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget metadata for NextTripWidgetReceiver. Defines the size
+  constraints + preview shown in the launcher's widget picker.
+
+  Min 2x2 cells — the countdown + trip name need that much room or
+  the text starts truncating. resizeMode="horizontal|vertical" lets
+  the user stretch the widget if they want bigger covers.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewImage="@mipmap/ic_launcher"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable" />

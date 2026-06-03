@@ -99,6 +99,22 @@
                 android:resource="@xml/share_paths" />
         </provider>
 
+        <!-- Home-screen widget: shows the user's next upcoming trip
+             with a live countdown. Backed by Glance — see
+             com.tripwave.app.widget.NextTripWidget for the composable
+             and NextTripWidgetUpdater for the in-app writer. -->
+        <receiver
+            android:name=".widget.NextTripWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_next_trip_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/next_trip_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>
