@@ -2,14 +2,20 @@ package com.tripwave.app.ui.trips
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tripwave.app.TripwaveApp
 import com.tripwave.app.data.api.ApiClient
+import com.tripwave.app.data.api.models.LockType
 import com.tripwave.app.data.api.models.PendingInvite
 import com.tripwave.app.data.api.models.Trip
 import com.tripwave.app.data.prefs.TripPrefsStore
+import com.tripwave.app.widget.NextTripWidgetUpdater
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 data class TripsState(
     val trips: List<Trip> = emptyList(),
@@ -82,12 +88,59 @@ class TripsViewModel : ViewModel() {
                     pendingInvites = invites,
                     isLoading = false
                 )
+                // Push the soonest upcoming trip into the home-screen
+                // widget so its countdown stays current. Runs after
+                // every successful trips fetch; the widget refreshes
+                // its timeline off the resulting state write.
+                pushNextTripToWidget(trips)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     isLoading = false,
                     error = e.message ?: "Failed to load trips"
                 )
             }
+        }
+    }
+
+    /**
+     * Find the trip whose locked start date is soonest in the future
+     * and write it to the widget shared state. Clears the snapshot
+     * when no trip has a locked future date so the widget shows the
+     * "No upcoming trips" placeholder.
+     *
+     * Server wire format on DecisionLock.lockedValue is "YYYY-MM-DD"
+     * or "YYYY-MM-DD to YYYY-MM-DD" — we take the start day either way.
+     */
+    private fun pushNextTripToWidget(trips: List<Trip>) {
+        val today = LocalDate.now()
+        val parser = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val next = trips
+            .mapNotNull { trip ->
+                val dateLock = trip.locks?.firstOrNull { it.lockType == LockType.DATE && it.locked }
+                val raw = dateLock?.lockedValue ?: return@mapNotNull null
+                val firstDay = raw.split(" to ").firstOrNull()?.trim() ?: return@mapNotNull null
+                val parsed = runCatching { LocalDate.parse(firstDay, parser) }.getOrNull() ?: return@mapNotNull null
+                if (parsed.isBefore(today)) return@mapNotNull null
+                trip to parsed
+            }
+            .minByOrNull { it.second }
+
+        val context = TripwaveApp.appContext ?: return
+        viewModelScope.launch {
+            if (next == null) {
+                NextTripWidgetUpdater.update(context, tripName = null, startDateEpochMs = null, destination = null)
+                return@launch
+            }
+            val (trip, date) = next
+            val dest = trip.destinations?.firstOrNull()
+            val destination = dest?.let { "${it.city}, ${it.country}" }
+            val epochMs = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            NextTripWidgetUpdater.update(
+                context,
+                tripName = trip.name,
+                startDateEpochMs = epochMs,
+                destination = destination,
+            )
         }
     }
 
