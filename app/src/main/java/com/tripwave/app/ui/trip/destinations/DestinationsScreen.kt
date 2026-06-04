@@ -224,20 +224,18 @@ private fun DestinationCard(
                     .fillMaxWidth()
                     .height(120.dp)
             ) {
-                if (!destination.imageUrl.isNullOrEmpty()) {
-                    AsyncImage(
-                        model = destination.imageUrl,
-                        contentDescription = destination.city,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Brush.linearGradient(listOf(Dusk, Dusk.copy(alpha = 0.6f))))
-                    )
-                }
+                // Fall back to a curated generic-travel photo (hashed
+                // off the city so the same destination always gets the
+                // same crop) instead of a flat gradient. Matches the
+                // web fix in tripsyc PR #27 + the iOS CityPhotoFallback.
+                val photoUrl = destination.imageUrl?.takeIf { it.isNotEmpty() }
+                    ?: cityPhotoFallback(destination.city)
+                AsyncImage(
+                    model = photoUrl,
+                    contentDescription = destination.city,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
                 if (destination.shortlisted) {
                     Surface(
                         modifier = Modifier
