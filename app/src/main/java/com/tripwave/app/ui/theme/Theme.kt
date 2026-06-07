@@ -2,6 +2,7 @@ package com.tripwave.app.ui.theme
 
 import android.app.Activity
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -29,6 +30,40 @@ private val LightColorScheme = lightColorScheme(
     onError = CardBackground,
     tertiary = Sage,
     onTertiary = CardBackground,
+)
+
+/// Dark scheme keeps the brand identity — Coral / Dusk / Sage stay vivid on
+/// the warm chalk-scale background. Material You dynamic colors are
+/// intentionally NOT used so the trip app reads the same regardless of
+/// wallpaper; a heavy brand identity like this app's loses too much when
+/// the primary swaps to the system palette.
+///
+/// Wired but NOT yet selected by `TripwaveTheme` — screens currently hardcode
+/// raw `Chalk*` / `Coral` references rather than reading from
+/// `MaterialTheme.colorScheme.*`, so flipping to this scheme today would only
+/// swap the status/nav bar colors while every Composable stays light-themed.
+/// Activate after a sweep migrates screens to colorScheme tokens.
+@Suppress("unused")
+private val DarkColorScheme = darkColorScheme(
+    primary = Coral,
+    onPrimary = Chalk900,
+    primaryContainer = Coral.copy(alpha = 0.20f),
+    onPrimaryContainer = CoralLight,
+    secondary = Dusk,
+    onSecondary = Chalk900,
+    secondaryContainer = Dusk.copy(alpha = 0.22f),
+    background = Chalk900,
+    onBackground = Chalk100,
+    surface = CardBackgroundDark,
+    onSurface = Chalk100,
+    surfaceVariant = Chalk800,
+    onSurfaceVariant = Chalk300,
+    outline = Chalk700,
+    outlineVariant = Chalk800,
+    error = Danger,
+    onError = Chalk900,
+    tertiary = Sage,
+    onTertiary = Chalk900,
 )
 
 @Composable

@@ -98,7 +98,7 @@ fun TripSummaryScreen(trip: Trip) {
                     val min = lockedDest.estimatedCostMin
                     if (min != null) {
                         Spacer(Modifier.height(8.dp))
-                        Divider(color = Chalk100)
+                        HorizontalDivider(color = Chalk100)
                         Spacer(Modifier.height(8.dp))
                         Column {
                             Text(
@@ -174,7 +174,7 @@ fun TripSummaryScreen(trip: Trip) {
                 }
                 freshTrip.members?.let { members ->
                     if (members.isNotEmpty()) {
-                        Divider(color = Chalk100)
+                        HorizontalDivider(color = Chalk100)
                         members.forEachIndexed { idx, member ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -217,7 +217,7 @@ fun TripSummaryScreen(trip: Trip) {
                                     }
                                 }
                             }
-                            if (idx < members.lastIndex) Divider(color = Chalk100)
+                            if (idx < members.lastIndex) HorizontalDivider(color = Chalk100)
                         }
                     }
                 }
