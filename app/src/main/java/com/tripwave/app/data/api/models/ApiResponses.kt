@@ -66,6 +66,14 @@ data class ReadReceiptsResponse(
     val receipts: List<ReadReceipt>
 )
 
+/// Server-minted Supabase Realtime JWT. `expiresAt` is seconds since epoch
+/// (matches the web/iOS shape). Used to authorize subscription to private
+/// `trip:{id}:typing` and `trip:{id}:presence` channels.
+data class RealtimeTokenResponse(
+    val token: String,
+    val expiresAt: Double
+)
+
 // Expense API response types
 data class SimpleUser(
     val id: String,
