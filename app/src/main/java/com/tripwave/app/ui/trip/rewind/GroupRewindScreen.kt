@@ -9,7 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Paid
@@ -123,7 +123,7 @@ private fun Content(data: GroupRewindResponse) {
                         TotalCell(Icons.Default.Bedtime, "${data.totals.nights} nights", Modifier.weight(1f))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TotalCell(Icons.Default.Chat, "${data.totals.chatMessages} messages", Modifier.weight(1f))
+                        TotalCell(Icons.AutoMirrored.Filled.Chat, "${data.totals.chatMessages} messages", Modifier.weight(1f))
                         TotalCell(Icons.Default.Photo, "${data.totals.photos} photos", Modifier.weight(1f))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

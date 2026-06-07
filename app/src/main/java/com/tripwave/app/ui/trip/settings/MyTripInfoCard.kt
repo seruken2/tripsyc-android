@@ -192,7 +192,7 @@ fun MyTripInfoCard(member: TripMember, onSaved: () -> Unit) {
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(platformMenuOpen) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .menuAnchor(),
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
                     shape = RoundedCornerShape(10.dp),
                     colors = fieldColors()
                 )
