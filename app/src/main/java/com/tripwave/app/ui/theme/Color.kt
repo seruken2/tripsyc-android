@@ -29,11 +29,16 @@ val Chalk500 = Color(0xFF7A7470)
 val Chalk600 = Color(0xFF5C5550)
 /** Chalk700 */
 val Chalk700 = Color(0xFF3D3936)
+/** One step below Chalk900 — dark-mode surface tier above the background */
+val Chalk800 = Color(0xFF2A2724)
 /** Primary text */
 val Chalk900 = Color(0xFF1A1714)
 
 // MARK: - Surfaces
 val CardBackground = Color(0xFFFFFFFF)
+/** Dark-mode surface (cards / dialog backgrounds). One notch lighter than
+ *  the chalk900 background so cards still pop slightly on dark backgrounds. */
+val CardBackgroundDark = Color(0xFF26221F)
 
 // MARK: - Semantic
 val Success = Color(0xFF4A9B6F)
