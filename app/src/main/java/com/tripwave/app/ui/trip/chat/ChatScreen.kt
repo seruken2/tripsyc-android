@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +29,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -37,16 +39,69 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.tripwave.app.data.api.ApiClient
 import com.tripwave.app.data.api.models.ChatMessageWithUser
+import com.tripwave.app.data.api.models.ChatUser
+import com.tripwave.app.data.api.models.ReplyInfo
+import com.tripwave.app.data.api.models.ReplyUser
 import com.tripwave.app.data.api.models.User
+import com.tripwave.app.data.realtime.TypingChannel
 import com.tripwave.app.ui.common.EmptyState
 import com.tripwave.app.ui.common.LoadingView
 import com.tripwave.app.ui.theme.*
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.sse.EventSource
+import okhttp3.sse.EventSourceListener
+import okhttp3.sse.EventSources
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.Locale
+import java.util.UUID
 
 private val QUICK_EMOJIS = listOf("❤️", "😂", "😮", "😢", "👍", "🔥", "🎉", "💯", "👀", "✈️")
+
+/// Cluster consecutive same-author messages sent within this window.
+/// First in a cluster shows the avatar + name; last shows the timestamp + tick.
+private const val GROUP_WINDOW_MS = 5L * 60 * 1000
+
+/// Optimistic-send state for messages still in flight or that failed to POST.
+/// Kept in a side Map keyed by client-side id so the ChatMessageWithUser API
+/// model stays pure.
+enum class ChatSendState { SENDING, FAILED }
+
+/// Server-Sent Events feed for `/api/chat/stream`. Emits one Unit per
+/// non-heartbeat event so callers can trigger a refetch. Reuses the
+/// app's shared OkHttp client so the cookie jar + mobile-client header
+/// ride along automatically. Throws on disconnect → caller backs off
+/// and reopens.
+private fun chatStreamFlow(tripId: String): Flow<Unit> = callbackFlow {
+    val request = Request.Builder()
+        .url("${ApiClient.BASE_URL}api/chat/stream?tripId=$tripId")
+        .header("Accept", "text/event-stream")
+        .header("Cache-Control", "no-cache")
+        .build()
+    val listener = object : EventSourceListener() {
+        override fun onEvent(es: EventSource, id: String?, type: String?, data: String) {
+            // Skip server-side keepalive frames so we don't refetch every 30s for nothing.
+            if (!data.contains("\"type\":\"heartbeat\"")) {
+                trySend(Unit)
+            }
+        }
+        override fun onFailure(es: EventSource, t: Throwable?, response: Response?) {
+            close(t)
+        }
+        override fun onClosed(es: EventSource) {
+            close()
+        }
+    }
+    val factory = EventSources.createFactory(ApiClient.okHttpClient)
+    val source = factory.newEventSource(request, listener)
+    awaitClose { source.cancel() }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +134,14 @@ fun ChatScreen(
     val clipboard = LocalClipboardManager.current
     val chatContext = androidx.compose.ui.platform.LocalContext.current
     var typingNames by remember { mutableStateOf<List<String>>(emptyList()) }
+    // Client-side delivery state for optimistic-sent bubbles. Keyed by the
+    // synthetic client id we generate in the send handler; cleared on success,
+    // flipped to FAILED on error so the user sees + can dismiss.
+    var sendStates by remember { mutableStateOf<Map<String, ChatSendState>>(emptyMap()) }
+    // Set of user ids currently viewing this trip — drives the avatar
+    // presence dot. Polled from /api/trips/:id/presence at 30s, matching
+    // LivePresenceRow's existing pattern (no Supabase dep needed).
+    var onlineUserIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
@@ -136,38 +199,91 @@ fun ChatScreen(
         }
     }
 
-    // Poll for new messages every 5 seconds
+    // Supabase Realtime typing channel. Lives alongside the REST poll: when
+    // SUPABASE_URL / SUPABASE_ANON_KEY are configured, the channel takes over
+    // and emits names via its own StateFlow; when unset, isAvailable returns
+    // false and we keep polling /api/chat/typing every 3s as a graceful fallback.
+    val typingChannel = remember(tripId) { TypingChannel(tripId, scope) }
+    val typingChannelNames by typingChannel.typingNames.collectAsState()
+
+    // Stream new-message events from /api/chat/stream (SSE). Falls back to a
+    // 5s poll cycle between disconnects with exponential backoff so the user
+    // still sees updates if SSE is blocked (corporate proxy, flaky network).
     LaunchedEffect(tripId) {
         loadMessages()
-        // Mark chat as read
         try { ApiClient.apiService.markRead(mapOf("tripId" to tripId)) } catch (_: Exception) {}
+
+        var backoffMs = 2_000L
         while (true) {
-            delay(5000)
-            loadMessages()
+            try {
+                chatStreamFlow(tripId).collect {
+                    backoffMs = 2_000L
+                    loadMessages()
+                }
+            } catch (_: Exception) {
+                // SSE dropped — fall through to backoff + poll fallback.
+            }
+            // While the stream is down, poll at 5s so we stay roughly fresh.
+            val pollUntil = System.currentTimeMillis() + backoffMs
+            while (System.currentTimeMillis() < pollUntil) {
+                delay(5_000)
+                loadMessages()
+            }
+            backoffMs = (backoffMs * 2).coerceAtMost(32_000L)
         }
     }
 
-    // Poll for typing indicators every 3 seconds
+    // Presence: who else is in this trip right now. Same endpoint
+    // LivePresenceRow polls, but cached here so MessageBubble can render
+    // a green dot on each online member's avatar.
     LaunchedEffect(tripId) {
         while (true) {
-            fetchTyping()
-            delay(3000)
+            try {
+                val resp = ApiClient.apiService.getPresence(tripId)
+                onlineUserIds = resp.viewers.map { it.userId }.toSet()
+            } catch (_: Exception) { /* non-critical */ }
+            delay(15_000)
         }
     }
 
-    // Send typing signal when text changes — throttled to one ping
-    // every 2 seconds to match iOS's typingSendThrottle. Without the
-    // throttle this fired on every keystroke; a fast typist was
-    // hitting the server ~5x/s.
+    // Typing indicators — either Supabase Realtime (when configured) or the
+    // legacy 3s REST poll as a fallback. The channel's StateFlow updates
+    // typingChannelNames directly via collectAsState above.
+    LaunchedEffect(tripId, currentUser?.id) {
+        if (typingChannel.isAvailable && currentUser != null) {
+            typingChannel.start(currentUser.id, currentUser.name)
+        } else {
+            // REST fallback only when Supabase isn't configured.
+            while (true) {
+                fetchTyping()
+                delay(3000)
+            }
+        }
+    }
+    DisposableEffect(tripId) {
+        onDispose { typingChannel.stop() }
+    }
+
+    // Mirror typing names from whichever source is live so the existing
+    // render block doesn't need to know about the source.
+    LaunchedEffect(typingChannelNames) {
+        if (typingChannel.isAvailable) typingNames = typingChannelNames
+    }
+
+    // Notify peers when the user is typing. Channel takes the realtime path;
+    // when not available we POST the legacy /api/chat/typing endpoint with
+    // the same 2s throttle.
     var lastTypingPingMs by remember { mutableStateOf(0L) }
     LaunchedEffect(messageText) {
         if (messageText.isEmpty()) return@LaunchedEffect
         val now = System.currentTimeMillis()
         if (now - lastTypingPingMs < 2_000L) return@LaunchedEffect
         lastTypingPingMs = now
-        try {
-            ApiClient.apiService.sendTyping(mapOf("tripId" to tripId))
-        } catch (_: Exception) {}
+        if (typingChannel.isAvailable) {
+            typingChannel.broadcast()
+        } else {
+            try { ApiClient.apiService.sendTyping(mapOf("tripId" to tripId)) } catch (_: Exception) {}
+        }
     }
 
     // Auto-scroll to bottom on new messages
@@ -282,16 +398,55 @@ fun ChatScreen(
                             }
                         }
 
-                        items(filteredMessages, key = { it.id }) { message ->
+                        itemsIndexed(filteredMessages, key = { _, m -> m.id }) { index, message ->
                             val isMe = message.userId == currentUser?.id
+                            val prev = filteredMessages.getOrNull(index - 1)
+                            val next = filteredMessages.getOrNull(index + 1)
+                            // Time-based grouping: same-author messages within
+                            // a 5-min window cluster. First in a cluster shows
+                            // the avatar + name; last in a cluster shows the
+                            // timestamp + tick. A bigger gap starts a new cluster.
+                            val msgMs = runCatching { Instant.parse(message.createdAt ?: "").toEpochMilli() }
+                                .getOrDefault(System.currentTimeMillis())
+                            val gapBefore = prev?.let {
+                                val prevMs = runCatching { Instant.parse(it.createdAt ?: "").toEpochMilli() }
+                                    .getOrDefault(Long.MIN_VALUE)
+                                msgMs - prevMs > GROUP_WINDOW_MS
+                            } ?: true
+                            val gapAfter = next?.let {
+                                val nextMs = runCatching { Instant.parse(it.createdAt ?: "").toEpochMilli() }
+                                    .getOrDefault(Long.MAX_VALUE)
+                                nextMs - msgMs > GROUP_WINDOW_MS
+                            } ?: true
+                            val showAvatar = prev == null || prev.userId != message.userId || gapBefore
+                            val isLastInGroup = next == null || next.userId != message.userId || gapAfter
+                            val sendState = sendStates[message.id]
+                            val isOnline = !isMe && onlineUserIds.contains(message.userId)
+                            val isReadByOthers = isMe && sendState == null && readReceipts.any { r ->
+                                r.userId != currentUser?.id &&
+                                    runCatching { Instant.parse(r.readAt).toEpochMilli() >= msgMs }.getOrDefault(false)
+                            }
                             MessageBubble(
                                 message = message,
                                 isCurrentUser = isMe,
                                 currentUserId = currentUser?.id,
-                                onLongPress = { actionTargetMessage = message },
+                                showAvatar = showAvatar,
+                                isLastInGroup = isLastInGroup,
+                                sendState = sendState,
+                                isOnline = isOnline,
+                                isReadByOthers = isReadByOthers,
+                                onDismissFailed = {
+                                    messages = messages.filterNot { it.id == message.id }
+                                    sendStates = sendStates - message.id
+                                },
+                                onLongPress = {
+                                    // Optimistic-pending or failed bubbles can't
+                                    // be acted on — their id isn't a real server row.
+                                    if (sendState == null) actionTargetMessage = message
+                                },
                                 modifier = Modifier.padding(
                                     horizontal = 12.dp,
-                                    vertical = 2.dp
+                                    vertical = if (showAvatar) 4.dp else 1.dp
                                 )
                             )
                         }
@@ -554,12 +709,51 @@ fun ChatScreen(
                     onClick = {
                         if (!canSend) return@IconButton
                         val text = messageText.trim()
-                        val replyId = replyingTo?.id
+                        val replyRef = replyingTo
+                        val replyId = replyRef?.id
                         val imageData = pendingImageDataUri
                         messageText = ""
                         replyingTo = null
                         pendingImageUri = null
                         pendingImageDataUri = null
+
+                        // Optimistic bubble: synthesize a ChatMessageWithUser
+                        // with a client-side id and append immediately. SSE +
+                        // refetch on success will swap in the real row; on
+                        // failure we flip its sendState to FAILED so the user
+                        // can tap to dismiss.
+                        val clientId = "optimistic-${UUID.randomUUID()}"
+                        val optimisticReply = replyRef?.let {
+                            ReplyInfo(
+                                id = it.id,
+                                text = it.text,
+                                imageUrl = it.imageUrl,
+                                userId = it.userId,
+                                user = ReplyUser(id = it.user.id, name = it.user.name)
+                            )
+                        }
+                        val nowIso = Instant.now().toString()
+                        val optimistic = ChatMessageWithUser(
+                            id = clientId,
+                            tripId = tripId,
+                            userId = currentUser?.id ?: "",
+                            text = text,
+                            imageUrl = imageData,
+                            replyToId = replyId,
+                            replyTo = optimisticReply,
+                            isPinned = false,
+                            editedAt = null,
+                            createdAt = nowIso,
+                            user = ChatUser(
+                                id = currentUser?.id ?: "",
+                                name = currentUser?.name,
+                                avatarUrl = currentUser?.avatarUrl
+                            ),
+                            reactions = null
+                        )
+                        messages = messages + optimistic
+                        sendStates = sendStates + (clientId to ChatSendState.SENDING)
+
                         scope.launch {
                             isSending = true
                             try {
@@ -569,14 +763,14 @@ fun ChatScreen(
                                     if (replyId != null) put("replyToId", replyId)
                                     if (imageData != null) put("imageUrl", imageData)
                                 }
-                                val sent = ApiClient.apiService.sendMessage(body)
-                                messages = messages + sent
-                                if (messages.isNotEmpty()) {
-                                    listState.animateScrollToItem(messages.size - 1)
-                                }
+                                ApiClient.apiService.sendMessage(body)
+                                // Drop the optimistic; loadMessages refetches
+                                // the real row so reactions/replies stay consistent.
+                                messages = messages.filterNot { it.id == clientId }
+                                sendStates = sendStates - clientId
+                                loadMessages()
                             } catch (_: Exception) {
-                                messageText = text
-                                pendingImageDataUri = imageData
+                                sendStates = sendStates + (clientId to ChatSendState.FAILED)
                             }
                             isSending = false
                         }
@@ -980,6 +1174,12 @@ private fun MessageBubble(
     message: ChatMessageWithUser,
     isCurrentUser: Boolean,
     currentUserId: String? = null,
+    showAvatar: Boolean = true,
+    isLastInGroup: Boolean = true,
+    sendState: ChatSendState? = null,
+    isOnline: Boolean = false,
+    isReadByOthers: Boolean = false,
+    onDismissFailed: () -> Unit = {},
     onLongPress: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -987,13 +1187,15 @@ private fun MessageBubble(
 
     Column(
         modifier = modifier.fillMaxWidth().combinedClickable(
-            onClick = {},
+            // Tap a failed bubble to dismiss it. Otherwise tap is a no-op and
+            // long-press opens the action sheet (suppressed upstream when pending).
+            onClick = { if (sendState == ChatSendState.FAILED) onDismissFailed() },
             onLongClick = onLongPress
         ),
         horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
     ) {
-        // Sender name (shown above other user messages)
-        if (!isCurrentUser) {
+        // Sender name — only on the first bubble of a cluster (showAvatar true).
+        if (!isCurrentUser && showAvatar) {
             Text(
                 text = senderName,
                 fontSize = 11.sp,
@@ -1008,30 +1210,52 @@ private fun MessageBubble(
             horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Avatar for other users (left side)
+            // Avatar for other users (left side). Only on first bubble of a
+            // cluster; subsequent bubbles in the same cluster reserve the
+            // same horizontal slot with a Spacer so the bubbles line up.
             if (!isCurrentUser) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Coral.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (!message.user.avatarUrl.isNullOrEmpty()) {
-                        AsyncImage(
-                            model = message.user.avatarUrl,
-                            contentDescription = senderName,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Text(
-                            text = senderName.firstOrNull()?.uppercase() ?: "?",
-                            color = Coral,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                if (showAvatar) {
+                    Box(
+                        modifier = Modifier.size(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Coral.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (!message.user.avatarUrl.isNullOrEmpty()) {
+                                AsyncImage(
+                                    model = message.user.avatarUrl,
+                                    contentDescription = senderName,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Text(
+                                    text = senderName.firstOrNull()?.uppercase() ?: "?",
+                                    color = Coral,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        // Sage-green presence dot, bottom-right of the avatar.
+                        if (isOnline) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(Sage)
+                                    .padding(1.5.dp)
+                            )
+                        }
                     }
+                } else {
+                    Spacer(modifier = Modifier.size(32.dp))
                 }
                 Spacer(modifier = Modifier.width(6.dp))
             }
@@ -1097,6 +1321,8 @@ private fun MessageBubble(
                     // Main bubble
                     // Own messages: coral bg, white text
                     // Other messages: white card, chalk900 text
+                    // Pending / failed get a subtle visual treatment so the
+                    // user knows the message hasn't reached the server yet.
                     Surface(
                         shape = RoundedCornerShape(
                             topStart = if (!isCurrentUser && message.replyTo == null) 4.dp else 12.dp,
@@ -1106,7 +1332,11 @@ private fun MessageBubble(
                         ),
                         color = if (isCurrentUser) Coral else Color.White,
                         shadowElevation = if (isCurrentUser) 0.dp else 1.dp,
-                        tonalElevation = 0.dp
+                        tonalElevation = 0.dp,
+                        border = if (sendState == ChatSendState.FAILED)
+                            androidx.compose.foundation.BorderStroke(1.5.dp, Danger)
+                        else null,
+                        modifier = Modifier.alpha(if (sendState == ChatSendState.SENDING) 0.7f else 1f)
                     ) {
                         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                             if (!message.imageUrl.isNullOrEmpty()) {
@@ -1130,14 +1360,47 @@ private fun MessageBubble(
                         }
                     }
 
-                    // Timestamp
-                    if (message.createdAt != null) {
-                        Text(
-                            text = formatTime(message.createdAt),
-                            fontSize = 10.sp,
-                            color = Chalk400,
+                    // Timestamp + delivery state. Only shown on the last bubble
+                    // of a cluster (so a burst of messages doesn't get cluttered)
+                    // or whenever the bubble is mid-flight / failed so the user
+                    // always sees in-flight status.
+                    if (message.createdAt != null && (isLastInGroup || sendState != null)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                        )
+                        ) {
+                            Text(
+                                text = formatTime(message.createdAt),
+                                fontSize = 10.sp,
+                                color = Chalk400
+                            )
+                            if (isCurrentUser) {
+                                when (sendState) {
+                                    ChatSendState.SENDING -> Text("·", fontSize = 10.sp, color = Chalk400)
+                                    ChatSendState.FAILED -> Text(
+                                        "Couldn't send — tap to dismiss",
+                                        fontSize = 10.sp,
+                                        color = Danger,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    null -> Text(
+                                        if (isReadByOthers) "✓✓" else "✓",
+                                        fontSize = 10.sp,
+                                        color = if (isReadByOthers) Dusk else Chalk400,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                                if (sendState == ChatSendState.SENDING) {
+                                    Text(
+                                        "Sending…",
+                                        fontSize = 10.sp,
+                                        color = Chalk400,
+                                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     // Reactions

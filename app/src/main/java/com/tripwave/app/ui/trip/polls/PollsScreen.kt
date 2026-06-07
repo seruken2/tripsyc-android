@@ -215,7 +215,7 @@ private fun PollCard(
                         Text("${option.voteCount}", color = Chalk500, fontSize = 13.sp)
                     }
                     LinearProgressIndicator(
-                        progress = pct,
+                        progress = { pct },
                         modifier = Modifier.fillMaxWidth().height(4.dp),
                         color = if (isWinner) Gold else Coral,
                         trackColor = Chalk200

@@ -287,7 +287,7 @@ private fun ExpenseCard(
             }
 
             if (expanded) {
-                Divider(color = Chalk200)
+                HorizontalDivider(color = Chalk200)
                 expense.splits.forEach { split ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -325,7 +325,7 @@ private fun ExpenseCard(
                 }
 
                 if (expense.paidBy == currentUserId) {
-                    Divider(color = Chalk200)
+                    HorizontalDivider(color = Chalk200)
                     TextButton(
                         onClick = onDelete,
                         contentPadding = PaddingValues(0.dp)
