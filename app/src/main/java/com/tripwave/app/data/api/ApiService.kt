@@ -329,6 +329,12 @@ interface ApiService {
     @GET("api/chat/typing")
     suspend fun getTyping(@Query("tripId") tripId: String): Response<Map<String, Any>>
 
+    // Short-lived JWT for Supabase Realtime. Embeds the caller's trip
+    // memberships in the `trips` claim so RLS lets us subscribe to
+    // private channels keyed by trip id.
+    @GET("api/realtime-token")
+    suspend fun getRealtimeToken(): RealtimeTokenResponse
+
     // ─── Notes ────────────────────────────────────────────────────────────────
 
     @GET("api/notes")

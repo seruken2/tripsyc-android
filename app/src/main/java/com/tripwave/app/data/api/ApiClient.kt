@@ -75,7 +75,10 @@ object ApiClient {
         cookieJar = PersistentCookieJar(store)
     }
 
-    private val okHttpClient: OkHttpClient by lazy {
+    /// Shared OkHttp client. Public so the SSE EventSource factory in
+    /// ChatScreen can reuse the same cookie jar + mobile-secret interceptor
+    /// without a second connection pool.
+    val okHttpClient: OkHttpClient by lazy {
         val builder = OkHttpClient.Builder()
             .cookieJar(cookieJar ?: throw IllegalStateException("ApiClient not initialized"))
             .addInterceptor { chain ->

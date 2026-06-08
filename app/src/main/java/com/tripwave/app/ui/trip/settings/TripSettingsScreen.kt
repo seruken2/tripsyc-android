@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -214,7 +215,7 @@ fun TripSettingsScreen(trip: Trip, currentUser: User?, onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger), enabled = !isLeaving
                     ) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Leave Trip")
                     }
@@ -365,28 +366,47 @@ private fun MemberRow(
     }
 
     if (showTransferConfirm) {
-        AlertDialog(
+        // Migrated from AlertDialog. Transfer-creator carries enough weight
+        // (irreversible role handover) that the bottom sheet's larger
+        // touch targets and more deliberate dismissal feel are appropriate.
+        ModalBottomSheet(
             onDismissRequest = { showTransferConfirm = false },
-            title = { Text("Transfer creator role?") },
-            text = {
+            containerColor = Color.White
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 8.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    "Transfer creator role?",
+                    fontWeight = FontWeight.SemiBold,
+                    color = Chalk900,
+                    fontSize = 18.sp
+                )
                 Text(
                     "Hand the trip over to ${member.name}? You'll become a " +
-                    "co-organizer. This can't be undone without their cooperation."
+                    "co-organizer. This can't be undone without their cooperation.",
+                    color = Chalk500,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
                 )
-            },
-            confirmButton = {
                 Button(
                     onClick = {
                         showTransferConfirm = false
                         onRoleChange(MemberRole.CREATOR)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Danger)
-                ) { Text("Transfer") }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showTransferConfirm = false }) { Text("Cancel") }
+                    colors = ButtonDefaults.buttonColors(containerColor = Danger),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Transfer", fontWeight = FontWeight.SemiBold) }
+                OutlinedButton(
+                    onClick = { showTransferConfirm = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Cancel") }
             }
-        )
+        }
     }
 
     HorizontalDivider(color = Chalk100, modifier = Modifier.padding(top = 8.dp))

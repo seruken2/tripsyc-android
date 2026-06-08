@@ -6,6 +6,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -144,7 +146,7 @@ private fun ProfileContent(p: GroupProfile) {
 
         if (p.activityLevels.isNotEmpty()) {
             Section(
-                icon = Icons.Default.DirectionsRun,
+                icon = Icons.AutoMirrored.Filled.DirectionsRun,
                 title = "Activity Levels",
                 accent = if (p.hasActivityConflict) Coral else Sage
             ) {
@@ -245,7 +247,7 @@ private fun ProfileContent(p: GroupProfile) {
         }
 
         p.walkingComforts?.takeIf { it.isNotEmpty() }?.let { walks ->
-            Section(icon = Icons.Default.DirectionsWalk, title = "Walking Comfort", accent = Sage) {
+            Section(icon = Icons.AutoMirrored.Filled.DirectionsWalk, title = "Walking Comfort", accent = Sage) {
                 p.walkingComfortFloor?.let {
                     Text(
                         "Group floor: ${friendlyLabel(it.pref)} (set by ${it.name})",

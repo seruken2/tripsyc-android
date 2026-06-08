@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import java.util.concurrent.TimeUnit
 
