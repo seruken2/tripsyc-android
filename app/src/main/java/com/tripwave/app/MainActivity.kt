@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
@@ -65,7 +66,12 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Chalk50
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    // Edge-to-edge: the Chalk50 Surface bg above paints under
+                    // the status + nav bars (matching the brand cream so the
+                    // system chrome blends in). Content is pushed inside the
+                    // safe area so headers + bottom-aligned controls don't
+                    // disappear under the bars or the gesture handle.
+                    Box(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
                         AppNavigation(
                             pendingTripId = bannerTripId.value ?: pendingTripId,
                             pendingDeepLink = pendingDeepLink
