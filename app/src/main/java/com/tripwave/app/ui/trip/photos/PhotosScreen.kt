@@ -469,11 +469,22 @@ private fun PhotoDetailDialog(
     }
 
     if (showDeleteConfirm) {
-        AlertDialog(
+        ModalBottomSheet(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete Photo?") },
-            text = { Text("This will permanently remove the photo for everyone in the trip.") },
-            confirmButton = {
+            containerColor = Color.White
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 8.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Delete photo?", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 18.sp)
+                Text(
+                    "This will permanently remove the photo for everyone in the trip.",
+                    color = Chalk500, fontSize = 14.sp, lineHeight = 20.sp
+                )
                 Button(
                     onClick = {
                         showDeleteConfirm = false
@@ -486,13 +497,15 @@ private fun PhotoDetailDialog(
                             isDeleting = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Danger)
-                ) { Text("Delete") }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+                    colors = ButtonDefaults.buttonColors(containerColor = Danger),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Delete", fontWeight = FontWeight.SemiBold) }
+                OutlinedButton(
+                    onClick = { showDeleteConfirm = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Cancel") }
             }
-        )
+        }
     }
 }
 

@@ -224,13 +224,25 @@ fun TripSettingsScreen(trip: Trip, currentUser: User?, onBack: () -> Unit) {
         }
     }
 
-    // Leave confirm dialog
+    // Leave confirm — ModalBottomSheet for consistency with the other
+    // destructive confirms in this screen (transfer-creator, kick).
     if (showLeaveConfirm) {
-        AlertDialog(
+        ModalBottomSheet(
             onDismissRequest = { showLeaveConfirm = false },
-            title = { Text("Leave Trip?") },
-            text = { Text("Are you sure you want to leave \"${trip.name}\"? This cannot be undone.") },
-            confirmButton = {
+            containerColor = Color.White
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 8.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Leave trip?", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 18.sp)
+                Text(
+                    "Are you sure you want to leave \"${trip.name}\"? This cannot be undone.",
+                    color = Chalk500, fontSize = 14.sp, lineHeight = 20.sp
+                )
                 Button(
                     onClick = {
                         showLeaveConfirm = false
@@ -241,20 +253,35 @@ fun TripSettingsScreen(trip: Trip, currentUser: User?, onBack: () -> Unit) {
                             isLeaving = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Danger)
-                ) { Text("Leave") }
-            },
-            dismissButton = { OutlinedButton(onClick = { showLeaveConfirm = false }) { Text("Cancel") } }
-        )
+                    colors = ButtonDefaults.buttonColors(containerColor = Danger),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Leave", fontWeight = FontWeight.SemiBold) }
+                OutlinedButton(
+                    onClick = { showLeaveConfirm = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Cancel") }
+            }
+        }
     }
 
-    // Kick confirm dialog
+    // Kick confirm
     memberToKick?.let { kickTarget ->
-        AlertDialog(
+        ModalBottomSheet(
             onDismissRequest = { memberToKick = null },
-            title = { Text("Remove Member?") },
-            text = { Text("Remove ${kickTarget.name} from \"${trip.name}\"?") },
-            confirmButton = {
+            containerColor = Color.White
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 8.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Remove member?", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 18.sp)
+                Text(
+                    "Remove ${kickTarget.name} from \"${trip.name}\"?",
+                    color = Chalk500, fontSize = 14.sp, lineHeight = 20.sp
+                )
                 Button(
                     onClick = {
                         memberToKick = null
@@ -268,11 +295,15 @@ fun TripSettingsScreen(trip: Trip, currentUser: User?, onBack: () -> Unit) {
                             } catch (_: Exception) {}
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Danger)
-                ) { Text("Remove") }
-            },
-            dismissButton = { OutlinedButton(onClick = { memberToKick = null }) { Text("Cancel") } }
-        )
+                    colors = ButtonDefaults.buttonColors(containerColor = Danger),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Remove", fontWeight = FontWeight.SemiBold) }
+                OutlinedButton(
+                    onClick = { memberToKick = null },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Cancel") }
+            }
+        }
     }
 }
 
