@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -143,7 +144,7 @@ private fun categoryIconColor(cat: ItineraryCategory): Pair<ImageVector, android
     when (cat) {
         ItineraryCategory.FLIGHT -> Pair(Icons.Default.AirplanemodeActive, Dusk)
         ItineraryCategory.HOTEL -> Pair(Icons.Default.Hotel, Gold)
-        ItineraryCategory.ACTIVITY -> Pair(Icons.Default.DirectionsRun, Coral)
+        ItineraryCategory.ACTIVITY -> Pair(Icons.AutoMirrored.Filled.DirectionsRun, Coral)
         ItineraryCategory.RESTAURANT -> Pair(Icons.Default.Restaurant, Success)
         ItineraryCategory.TRANSPORT -> Pair(Icons.Default.DirectionsCar, Chalk500)
         ItineraryCategory.EMERGENCY -> Pair(Icons.Default.LocalHospital, Danger)

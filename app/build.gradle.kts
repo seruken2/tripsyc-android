@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // Only apply google-services plugin when the config file is present, so the
@@ -48,6 +49,21 @@ android {
             "String",
             "MOBILE_CLIENT_SECRET",
             "\"${secret("TRIPWAVE_MOBILE_SECRET").orEmpty()}\""
+        )
+        // Supabase Realtime credentials for the typing channel. Empty string
+        // means realtime typing is disabled — the SupabaseBackend init returns
+        // null and ChatScreen falls back to the REST typing poll. Configure
+        // these in keystore.properties / env vars TRIPWAVE_SUPABASE_URL +
+        // TRIPWAVE_SUPABASE_ANON_KEY to enable.
+        buildConfigField(
+            "String",
+            "SUPABASE_URL",
+            "\"${secret("TRIPWAVE_SUPABASE_URL").orEmpty()}\""
+        )
+        buildConfigField(
+            "String",
+            "SUPABASE_ANON_KEY",
+            "\"${secret("TRIPWAVE_SUPABASE_ANON_KEY").orEmpty()}\""
         )
     }
 
@@ -123,6 +139,11 @@ dependencies {
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+    implementation(libs.okhttp.sse)
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.realtime)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.coroutines.android)
     implementation(libs.datastore.preferences)
     implementation(libs.coil.compose)
