@@ -133,11 +133,22 @@ fun CrewsScreen() {
     }
 
     crewToDelete?.let { crew ->
-        AlertDialog(
+        ModalBottomSheet(
             onDismissRequest = { crewToDelete = null },
-            title = { Text("Delete crew?") },
-            text = { Text("\"${crew.name}\" will be removed from your saved groups. This doesn't affect any trips you already invited them to.") },
-            confirmButton = {
+            containerColor = Color.White
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 8.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Delete crew?", fontWeight = FontWeight.SemiBold, color = Chalk900, fontSize = 18.sp)
+                Text(
+                    "\"${crew.name}\" will be removed from your saved groups. This doesn't affect any trips you already invited them to.",
+                    color = Chalk500, fontSize = 14.sp, lineHeight = 20.sp
+                )
                 Button(
                     onClick = {
                         val target = crew
@@ -149,13 +160,15 @@ fun CrewsScreen() {
                             } catch (_: Exception) {}
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Danger)
-                ) { Text("Delete") }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { crewToDelete = null }) { Text("Cancel") }
+                    colors = ButtonDefaults.buttonColors(containerColor = Danger),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Delete", fontWeight = FontWeight.SemiBold) }
+                OutlinedButton(
+                    onClick = { crewToDelete = null },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Cancel") }
             }
-        )
+        }
     }
 }
 
